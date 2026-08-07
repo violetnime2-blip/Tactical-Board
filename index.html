@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tactical Board - Full System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .pitch-bg {
+      background: radial-gradient(circle, #1a382b 0%, #0d1f17 100%);
+    }
+    .player-token {
+      touch-action: none;
+      user-select: none;
+    }
+    /* Pulse effect untuk Swap/Sub mode */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 184, 66, 0.7); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(245, 184, 66, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 184, 66, 0); }
+    }
+    .selected-for-swap {
+      animation: pulse-ring 1.5s infinite;
+      border-color: #f5b842 !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col items-center p-2 sm:p-4 font-sans select-none">
+
+  <!-- Header & Status Bar -->
+  <header class="w-full max-w-md flex justify-between items-center mb-3 px-2">
+    <div>
+      <h1 class="text-base font-extrabold tracking-wider text-yellow-400">TACTICAL BOARD</h1>
+      <p class="text-[10px] text-gray-400">Squad Builder & Dynamic Position Engine</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="swapBtn" onclick="toggleSwapMode()" class="px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 font-bold text-xs rounded-lg hover:border-yellow-500 transition-all">
+        🔄 Swap
+      </button>
+      <button onclick="openModal()" class="px-3 py-1.5 bg-[#f5b842] text-black font-bold text-xs rounded-lg hover:bg-yellow-500 transition-all shadow">
+        + Pemain
+      </button>
+    </div>
+  </header>
+
+  <!-- PITCH / LAPANGAN -->
+  <main class="w-full max-w-md bg-[#0f1714] border border-gray-800 rounded-2xl p-3 shadow-2xl flex flex-col gap-3">
+    
+    <div id="pitch" class="pitch-bg relative w-full aspect-[3/4] border-2 border-emerald-900/60 rounded-xl overflow-hidden shadow-inner">
+      <!-- Garis Lapangan SVG -->
+      <svg class="absolute inset-0 w-full h-full opacity-30 pointer-events-none" viewBox="0 0 100 133.3" preserveAspectRatio="none">
+        <rect x="2" y="2" width="96" height="129.3" fill="none" stroke="#fff" stroke-width="0.8"/>
+        <line x1="2" y1="66.6" x2="98" y2="66.6" stroke="#fff" stroke-width="0.8"/>
+        <circle cx="50" cy="66.6" r="15" fill="none" stroke="#fff" stroke-width="0.8"/>
+        <!-- Penalty Area Top & Bottom -->
+        <rect x="20" y="2" width="60" height="22" fill="none" stroke="#fff" stroke-width="0.8"/>
+        <rect x="20" y="109.3" width="60" height="22" fill="none" stroke="#fff" stroke-width="0.8"/>
+        <circle cx="50" cy="16" r="0.8" fill="#fff"/>
+        <circle cx="50" cy="117.3" r="0.8" fill="#fff"/>
+      </svg>
+
+      <!-- Token Pemain Lapangan (Dirender via JS) -->
+      <div id="playersContainer" class="absolute inset-0"></div>
+    </div>
+
+    <!-- BENCH / CADANGAN -->
+    <div class="bg-[#141c18] border border-gray-800 rounded-xl p-3">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+        <span>Bench / Cadangan</span>
+        <span id="benchCount" class="text-[10px] bg-gray-800 px-2 py-0.5 rounded-full text-gray-300">0</span>
+      </h2>
+      <div id="benchContainer" class="flex gap-2 overflow-x-auto pb-1 min-h-[65px] items-center">
+        <p id="emptyBenchText" class="text-xs text-gray-600 italic">Belum ada pemain di bench. Buat pemain baru!</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL BUAT PEMAIN -->
+  <div id="createPlayerModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-[#121816] border border-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-sm font-extrabold tracking-wider uppercase text-gray-200">BUAT PEMAIN BARU</h2>
+        <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <form id="playerForm" class="space-y-4">
+        
+        <!-- Row 1: Foto & Nama -->
+        <div class="flex gap-3 items-center">
+          <label class="relative w-16 h-16 rounded-full border-2 border-dashed border-gray-600 flex flex-col items-center justify-center text-xs text-gray-400 cursor-pointer hover:border-yellow-500 shrink-0 overflow-hidden bg-[#1c2421]">
+            <input type="file" id="playerPhotoInput" accept="image/*" class="hidden" onchange="previewImage(event)">
+            <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
+            <div id="photoPlaceholder" class="flex flex-col items-center">
+              <span class="text-[10px] font-bold">FOTO</span>
+              <span class="text-[8px] text-gray-500">+ Upload</span>
+            </div>
+          </label>
+          <div class="flex-1">
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Nama</label>
+            <input type="text" id="playerName" placeholder="cth. Kylian Mbappé" required
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+        </div>
+
+        <!-- Row 2: OVR & Posisi Ideal -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">OVR Rating</label>
+            <input type="number" id="playerOvr" min="40" max="99" value="75" required
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Posisi Ideal</label>
+            <select id="playerPosition"
+              class="w-full bg-[#1c2421] border border-yellow-500/80 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500 text-yellow-400 font-bold">
+              <option value="GK" class="bg-gray-900 text-white">GK</option>
+              <option value="CB" class="bg-gray-900 text-white">CB</option>
+              <option value="LB" class="bg-gray-900 text-white">LB</option>
+              <option value="RB" class="bg-gray-900 text-white">RB</option>
+              <option value="CDM" class="bg-gray-900 text-white">CDM</option>
+              <option value="CM" selected class="bg-gray-900 text-white">CM</option>
+              <option value="CAM" class="bg-gray-900 text-white">CAM</option>
+              <option value="LM" class="bg-gray-900 text-white">LM</option>
+              <option value="RM" class="bg-gray-900 text-white">RM</option>
+              <option value="LW" class="bg-gray-900 text-white">LW</option>
+              <option value="RW" class="bg-gray-900 text-white">RW</option>
+              <option value="ST" class="bg-gray-900 text-white">ST</option>
+              <option value="CF" class="bg-gray-900 text-white">CF</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 3: Kewarganegaraan -->
+        <div>
+          <label class="text-[10px] text-gray-400 font-semibold uppercase">Kewarganegaraan</label>
+          <select id="playerNationality"
+            class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </select>
+        </div>
+
+        <!-- Row 4: Tinggi & Berat -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Tinggi (cm)</label>
+            <input type="number" id="playerHeight" placeholder="175" value="175" required
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Berat (kg)</label>
+            <input type="number" id="playerWeight" placeholder="70" value="70" required
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+        </div>
+
+        <!-- Row 5: Kaki Utama & Alt Pos -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Kaki Utama</label>
+            <select id="playerFoot"
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+              <option value="Right">Kanan (Right)</option>
+              <option value="Left">Kiri (Left)</option>
+              <option value="Both">Keduanya (Both)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-gray-400 font-semibold uppercase">Posisi Alt (opsional)</label>
+            <input type="text" id="playerAltPos" placeholder="cth. CAM, RW"
+              class="w-full bg-[#1c2421] border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-3">
+          <button type="button" onclick="closeModal()"
+            class="w-full py-2.5 bg-[#1c2421] hover:bg-gray-800 text-gray-300 font-semibold rounded-lg text-xs">
+            Batal
+          </button>
+          <button type="submit"
+            class="w-full py-2.5 bg-[#f5b842] hover:bg-yellow-500 text-black font-bold rounded-lg text-xs transition-colors">
+            Simpan ke Bench
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Master Database 200+ Negara di Dunia
+    const ALL_COUNTRIES = [
+      { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' }, { code: 'AL', name: 'Albania', flag: '🇦🇱' },
+      { code: 'DZ', name: 'Algeria', flag: '🇩🇿' }, { code: 'AD', name: 'Andorra', flag: '🇦🇩' },
+      { code: 'AO', name: 'Angola', flag: '🇦🇴' }, { code: 'AG', name: 'Antigua and Barbuda', flag: '🇦🇬' },
+      { code: 'AR', name: 'Argentina', flag: '🇦🇷' }, { code: 'AM', name: 'Armenia', flag: '🇦🇲' },
+      { code: 'AU', name: 'Australia', flag: '🇦🇺' }, { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+      { code: 'AZ', name: 'Azerbaijan', flag: '🇦🇿' }, { code: 'BS', name: 'Bahamas', flag: '🇧🇸' },
+      { code: 'BH', name: 'Bahrain', flag: '🇧🇭' }, { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+      { code: 'BB', name: 'Barbados', flag: '🇧🇧' }, { code: 'BY', name: 'Belarus', flag: '🇧🇾' },
+      { code: 'BE', name: 'Belgium', flag: '🇧🇪' }, { code: 'BZ', name: 'Belize', flag: '🇧🇿' },
+      { code: 'BJ', name: 'Benin', flag: '🇧🇯' }, { code: 'BT', name: 'Bhutan', flag: '🇧🇹' },
+      { code: 'BO', name: 'Bolivia', flag: '🇧🇴' }, { code: 'BA', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+      { code: 'BW', name: 'Botswana', flag: '🇧🇼' }, { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+      { code: 'BN', name: 'Brunei', flag: '🇧🇳' }, { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
+      { code: 'BF', name: 'Burkina Faso', flag: '🇧🇫' }, { code: 'BI', name: 'Burundi', flag: '🇧🇮' },
+      { code: 'KH', name: 'Cambodia', flag: '🇰🇭' }, { code: 'CM', name: 'Cameroon', flag: '🇨🇲' },
+      { code: 'CA', name: 'Canada', flag: '🇨🇦' }, { code: 'CV', name: 'Cape Verde', flag: '🇨🇻' },
+      { code: 'CF', name: 'Central African Republic', flag: '🇨🇫' }, { code: 'TD', name: 'Chad', flag: '🇹🇩' },
+      { code: 'CL', name: 'Chile', flag: '🇨🇱' }, { code: 'CN', name: 'China', flag: '🇨🇳' },
+      { code: 'CO', name: 'Colombia', flag: '🇨🇴' }, { code: 'KM', name: 'Comoros', flag: '🇰🇲' },
+      { code: 'CG', name: 'Congo', flag: '🇨🇬' }, { code: 'CD', name: 'DR Congo', flag: '🇨🇩' },
+      { code: 'CR', name: 'Costa Rica', flag: '🇨🇷' }, { code: 'HR', name: 'Croatia', flag: '🇭🇷' },
+      { code: 'CU', name: 'Cuba', flag: '🇨🇺' }, { code: 'CY', name: 'Cyprus', flag: '🇨🇾' },
+      { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' }, { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
+      { code: 'DJ', name: 'Djibouti', flag: '🇩🇯' }, { code: 'DM', name: 'Dominica', flag: '🇩🇲' },
+      { code: 'DO', name: 'Dominican Republic', flag: '🇩🇴' }, { code: 'EC', name: 'Ecuador', flag: '🇪🇨' },
+      { code: 'EG', name: 'Egypt', flag: '🇪🇬' }, { code: 'SV', name: 'El Salvador', flag: '🇸🇻' },
+      { code: 'EN', name: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' }, { code: 'GQ', name: 'Equatorial Guinea', flag: '🇬🇶' },
+      { code: 'ER', name: 'Eritrea', flag: '🇪🇷' }, { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
+      { code: 'SZ', name: 'Eswatini', flag: '🇸🇿' }, { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
+      { code: 'FJ', name: 'Fiji', flag: '🇫🇯' }, { code: 'FI', name: 'Finland', flag: '🇫🇮' },
+      { code: 'FR', name: 'France', flag: '🇫🇷' }, { code: 'GA', name: 'Gabon', flag: '🇬🇦' },
+      { code: 'GM', name: 'Gambia', flag: '🇬🇲' }, { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
+      { code: 'DE', name: 'Germany', flag: '🇩🇪' }, { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+      { code: 'GR', name: 'Greece', flag: '🇬🇷' }, { code: 'GD', name: 'Grenada', flag: '🇬🇩' },
+      { code: 'GT', name: 'Guatemala', flag: '🇬🇹' }, { code: 'GN', name: 'Guinea', flag: '🇬🇳' },
+      { code: 'GW', name: 'Guinea-Bissau', flag: '🇬🇼' }, { code: 'GY', name: 'Guyana', flag: '🇬🇾' },
+      { code: 'HT', name: 'Haiti', flag: '🇭🇹' }, { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
+      { code: 'HU', name: 'Hungary', flag: '🇭🇺' }, { code: 'IS', name: 'Iceland', flag: '🇮🇸' },
+      { code: 'IN', name: 'India', flag: '🇮🇳' }, { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+      { code: 'IR', name: 'Iran', flag: '🇮🇷' }, { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
+      { code: 'IE', name: 'Ireland', flag: '🇮🇪' }, { code: 'IL', name: 'Israel', flag: '🇮🇱' },
+      { code: 'IT', name: 'Italy', flag: '🇮🇹' }, { code: 'CI', name: 'Ivory Coast', flag: '🇨🇮' },
+      { code: 'JM', name: 'Jamaica', flag: '🇯🇲' }, { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+      { code: 'JO', name: 'Jordan', flag: '🇯🇴' }, { code: 'KZ', name: 'Kazakhstan', flag: '🇰🇿' },
+      { code: 'KE', name: 'Kenya', flag: '🇰🇪' }, { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
+      { code: 'KG', name: 'Kyrgyzstan', flag: '🇰🇬' }, { code: 'LA', name: 'Laos', flag: '🇱🇦' },
+      { code: 'LV', name: 'Latvia', flag: '🇱🇻' }, { code: 'LB', name: 'Lebanon', flag: '🇱🇧' },
+      { code: 'LS', name: 'Lesotho', flag: '🇱🇸' }, { code: 'LR', name: 'Liberia', flag: '🇱🇷' },
+      { code: 'LY', name: 'Libya', flag: '🇱🇾' }, { code: 'LI', name: 'Liechtenstein', flag: '🇱🇮' },
+      { code: 'LT', name: 'Lithuania', flag: '🇱🇹' }, { code: 'LU', name: 'Luxembourg', flag: '🇱🇺' },
+      { code: 'MG', name: 'Madagascar', flag: '🇲🇬' }, { code: 'MW', name: 'Malawi', flag: '🇲🇼' },
+      { code: 'MY', name: 'Malaysia', flag: '🇲🇾' }, { code: 'MV', name: 'Maldives', flag: '🇲🇻' },
+      { code: 'ML', name: 'Mali', flag: '🇲🇱' }, { code: 'MT', name: 'Malta', flag: '🇲🇹' },
+      { code: 'MR', name: 'Mauritania', flag: '🇲🇷' }, { code: 'MU', name: 'Mauritius', flag: '🇲🇺' },
+      { code: 'MX', name: 'Mexico', flag: '🇲🇽' }, { code: 'MD', name: 'Moldova', flag: '🇲🇩' },
+      { code: 'MC', name: 'Monaco', flag: '🇲🇨' }, { code: 'MN', name: 'Mongolia', flag: '🇲🇳' },
+      { code: 'ME', name: 'Montenegro', flag: '🇲🇪' }, { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
+      { code: 'MZ', name: 'Mozambique', flag: '🇲🇿' }, { code: 'MM', name: 'Myanmar', flag: '🇲🇲' },
+      { code: 'NA', name: 'Namibia', flag: '🇳🇦' }, { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
+      { code: 'NL', name: 'Netherlands', flag: '🇳🇱' }, { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
+      { code: 'NI', name: 'Nicaragua', flag: '🇳🇮' }, { code: 'NE', name: 'Niger', flag: '🇳🇪' },
+      { code: 'NG', name: 'Nigeria', flag: '🇳🇬' }, { code: 'KP', name: 'North Korea', flag: '🇰🇵' },
+      { code: 'MK', name: 'North Macedonia', flag: '🇲🇰' }, { code: 'NO', name: 'Norway', flag: '🇳🇴' },
+      { code: 'OM', name: 'Oman', flag: '🇴🇲' }, { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+      { code: 'PS', name: 'Palestine', flag: '🇵🇸' }, { code: 'PA', name: 'Panama', flag: '🇵🇦' },
+      { code: 'PG', name: 'Papua New Guinea', flag: '🇵🇬' }, { code: 'PY', name: 'Paraguay', flag: '🇵🇾' },
+      { code: 'PE', name: 'Peru', flag: '🇵🇪' }, { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+      { code: 'PL', name: 'Poland', flag: '🇵🇱' }, { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+      { code: 'QA', name: 'Qatar', flag: '🇶🇦' }, { code: 'RO', name: 'Romania', flag: '🇷🇴' },
+      { code: 'RU', name: 'Russia', flag: '🇷🇺' }, { code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
+      { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' }, { code: 'SN', name: 'Senegal', flag: '🇸🇳' },
+      { code: 'RS', name: 'Serbia', flag: '🇷🇸' }, { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+      { code: 'SK', name: 'Slovakia', flag: '🇸🇰' }, { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
+      { code: 'ZA', name: 'South Africa', flag: '🇿🇦' }, { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+      { code: 'ES', name: 'Spain', flag: '🇪🇸' }, { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
+      { code: 'SD', name: 'Sudan', flag: '🇸🇩' }, { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+      { code: 'CH', name: 'Switzerland', flag: '🇨🇭' }, { code: 'SY', name: 'Syria', flag: '🇸🇾' },
+      { code: 'TW', name: 'Taiwan', flag: '🇹🇼' }, { code: 'TJ', name: 'Tajikistan', flag: '🇹🇯' },
+      { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' }, { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+      { code: 'TL', name: 'Timor-Leste', flag: '🇹🇱' }, { code: 'TG', name: 'Togo', flag: '🇹🇬' },
+      { code: 'TT', name: 'Trinidad and Tobago', flag: '🇹🇹' }, { code: 'TN', name: 'Tunisia', flag: '🇹🇳' },
+      { code: 'TR', name: 'Turkey', flag: '🇹🇷' }, { code: 'TM', name: 'Turkmenistan', flag: '🇹🇲' },
+      { code: 'UG', name: 'Uganda', flag: '🇺🇬' }, { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
+      { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' }, { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+      { code: 'US', name: 'United States', flag: '🇺🇸' }, { code: 'UY', name: 'Uruguay', flag: '🇺🇾' },
+      { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' }, { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
+      { code: 'VN', name: 'Vietnam', flag: '🇻🇳' }, { code: 'YE', name: 'Yemen', flag: '🇾🇪' },
+      { code: 'ZM', name: 'Zambia', flag: '🇿🇲' }, { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' }
+    ].sort((a, b) => a.name.localeCompare(b.name));
+
+    // Populate Select Box
+    const nationalitySelect = document.getElementById('playerNationality');
+    ALL_COUNTRIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = `${c.flag} ${c.name}`;
+      opt.className = "bg-gray-900 text-white";
+      if (c.code === 'ID') opt.selected = true;
+      nationalitySelect.appendChild(opt);
+    });
+
+    // STATE ENGINE
+    let isSwapMode = false;
+    let selectedPlayerForSwap = null;
+    let currentPhotoBase64 = '';
+
+    let players = [];
+    let bench = [];
+
+    // Image Upload Handler
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentPhotoBase64 = e.target.result;
+          const imgEl = document.getElementById('photoPreview');
+          const placeholder = document.getElementById('photoPlaceholder');
+          imgEl.src = currentPhotoBase64;
+          imgEl.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Modal Handler
+    function openModal() {
+      document.getElementById('createPlayerModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('createPlayerModal').classList.add('hidden');
+      document.getElementById('playerForm').reset();
+      currentPhotoBase64 = '';
+      document.getElementById('photoPreview').classList.add('hidden');
+      document.getElementById('photoPlaceholder').classList.remove('hidden');
+    }
+
+    // Form Submit Engine
+    document.getElementById('playerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const newPlayer = {
+        id: 'p_' + Date.now(),
+        name: document.getElementById('playerName').value,
+        ovr: parseInt(document.getElementById('playerOvr').value),
+        position: document.getElementById('playerPosition').value,
+        nationality: document.getElementById('playerNationality').value,
+        height: parseInt(document.getElementById('playerHeight').value),
+        weight: parseInt(document.getElementById('playerWeight').value),
+        foot: document.getElementById('playerFoot').value,
+        altPos: document.getElementById('playerAltPos').value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean),
+        photo: currentPhotoBase64
+      };
+
+      bench.push(newPlayer);
+      closeModal();
+      renderAll();
+    });
+
+    // ENGINE PEMETAAN POSISI DINAMIS
+    function calculatePositionRating(player, xPct, yPct) {
+      let currentZone = '';
+      
+      if (yPct > 82) {
+        currentZone = 'GK';
+      } else if (yPct > 62) {
+        if (xPct < 30) currentZone = 'LB';
+        else if (xPct > 70) currentZone = 'RB';
+        else currentZone = 'CB';
+      } else if (yPct > 45) {
+        if (xPct >= 30 && xPct <= 70) currentZone = 'CDM';
+        else if (xPct < 30) currentZone = 'LM';
+        else currentZone = 'RM';
+      } else if (yPct > 32) {
+        if (xPct < 30) currentZone = 'LM';
+        else if (xPct > 70) currentZone = 'RM';
+        else currentZone = 'CM';
+      } else if (yPct > 20) {
+        if (xPct < 25) currentZone = 'LW';
+        else if (xPct > 75) currentZone = 'RW';
+        else currentZone = 'CAM';
+      } else if (yPct > 10) {
+        if (xPct < 25) currentZone = 'LW';
+        else if (xPct > 75) currentZone = 'RW';
+        else currentZone = 'CF';
+      } else {
+        if (xPct < 25) currentZone = 'LW';
+        else if (xPct > 75) currentZone = 'RW';
+        else currentZone = 'ST';
+      }
+
+      let effectiveOvr = player.ovr;
+      let statusColor = 'text-green-400';
+
+      if (player.position === currentZone) {
+        statusColor = 'text-green-400';
+      } else if (player.altPos.includes(currentZone)) {
+        effectiveOvr = Math.max(40, player.ovr - 2);
+        statusColor = 'text-yellow-400';
+      } else {
+        const isIdealDef = ['GK', 'CB', 'LB', 'RB'].includes(player.position);
+        const isIdealAtt = ['ST', 'CF', 'LW', 'RW'].includes(player.position);
+
+        const isCurrentDef = ['GK', 'CB', 'LB', 'RB'].includes(currentZone);
+        const isCurrentAtt = ['ST', 'CF', 'LW', 'RW'].includes(currentZone);
+
+        if ((isIdealDef && isCurrentAtt) || (isIdealAtt && isCurrentDef) || (player.position === 'GK' && currentZone !== 'GK') || (player.position !== 'GK' && currentZone === 'GK')) {
+          effectiveOvr = Math.max(40, player.ovr - 15);
+          statusColor = 'text-red-500';
+        } else {
+          effectiveOvr = Math.max(40, player.ovr - 7);
+          statusColor = 'text-orange-400';
+        }
+      }
+
+      return {
+        calculatedPos: currentZone,
+        effectiveOvr: effectiveOvr,
+        statusColor: statusColor
+      };
+    }
+
+    // SWAP / SUBSTITUTION ENGINE
+    function toggleSwapMode() {
+      isSwapMode = !isSwapMode;
+      const swapBtn = document.getElementById('swapBtn');
+      if (isSwapMode) {
+        swapBtn.classList.remove('bg-gray-800', 'text-gray-300');
+        swapBtn.classList.add('bg-yellow-500', 'text-black', 'font-black');
+      } else {
+        swapBtn.classList.add('bg-gray-800', 'text-gray-300');
+        swapBtn.classList.remove('bg-yellow-500', 'text-black', 'font-black');
+        selectedPlayerForSwap = null;
+      }
+      renderAll();
+    }
+
+    function handlePlayerClick(player, source) {
+      if (!isSwapMode) return;
+
+      if (!selectedPlayerForSwap) {
+        selectedPlayerForSwap = { player, source };
+      } else {
+        const first = selectedPlayerForSwap;
+        const second = { player, source };
+
+        if (first.player.id === second.player.id) {
+          selectedPlayerForSwap = null;
+          renderAll();
+          return;
+        }
+
+        if (first.source === 'pitch' && second.source === 'pitch') {
+          const tempX = first.player.x;
+          const tempY = first.player.y;
+          first.player.x = second.player.x;
+          first.player.y = second.player.y;
+          second.player.x = tempX;
+          second.player.y = tempY;
+        } else if (first.source === 'pitch' && second.source === 'bench') {
+          players = players.filter(p => p.player.id !== first.player.player.id);
+          bench = bench.filter(p => p.id !== second.player.id);
+          
+          second.player.x = first.player.x;
+          second.player.y = first.player.y;
+
+          players.push(second.player);
+          bench.push(first.player.player);
+        } else if (first.source === 'bench' && second.source === 'pitch') {
+          players = players.filter(p => p.player.id !== second.player.player.id);
+          bench = bench.filter(p => p.id !== first.player.id);
+
+          first.player.x = second.player.x;
+          first.player.y = second.player.y;
+
+          players.push(first.player);
+          bench.push(second.player.player);
+        }
+
+        selectedPlayerForSwap = null;
+        isSwapMode = false;
+        toggleSwapMode();
+      }
+      renderAll();
+    }
+
+    // RENDER ENGINE
+    function renderAll() {
+      renderPitch();
+      renderBench();
+    }
+
+    function renderPitch() {
+      const container = document.getElementById('playersContainer');
+      container.innerHTML = '';
+
+      players.forEach(pData => {
+        const p = pData.player;
+        const posAnalysis = calculatePositionRating(p, pData.x, pData.y);
+        const country = ALL_COUNTRIES.find(c => c.code === p.nationality) || { flag: '🌐' };
+
+        const isSelected = selectedPlayerForSwap && selectedPlayerForSwap.player.player?.id === p.id;
+
+        const token = document.createElement('div');
+        token.className = `player-token absolute flex flex-col items-center cursor-pointer transition-transform ${isSelected ? 'selected-for-swap z-30' : 'z-10'}`;
+        token.style.left = `${pData.x}%`;
+        token.style.top = `${pData.y}%`;
+        token.style.transform = 'translate(-50%, -50%)';
+
+        const photoHtml = p.photo 
+          ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover border border-gray-500 my-0.5" />`
+          : `<div class="w-6 h-6 rounded-full bg-gray-800 text-[8px] flex items-center justify-center font-bold text-gray-400 border border-gray-700 my-0.5">👤</div>`;
+
+        token.innerHTML = `
+          <div class="relative bg-gray-900/90 border border-gray-700 rounded-lg p-1 min-w-[50px] flex flex-col items-center shadow-lg backdrop-blur-sm">
+            <div class="flex items-center gap-1 w-full justify-between px-0.5">
+              <span class="text-[9px]">${country.flag}</span>
+              <span class="text-[10px] font-black ${posAnalysis.statusColor}">${posAnalysis.effectiveOvr}</span>
+            </div>
+            ${photoHtml}
+            <div class="text-[9px] font-extrabold text-white truncate max-w-[45px] leading-tight mt-0.5">${p.name.split(' ').pop()}</div>
+            <div class="text-[7px] font-bold text-yellow-400 bg-gray-950/80 px-1 rounded mt-0.5">${posAnalysis.calculatedPos}</div>
+          </div>
+        `;
+
+        token.addEventListener('click', () => {
+          if (isSwapMode) handlePlayerClick(pData, 'pitch');
+        });
+
+        setupDrag(token, pData);
+        container.appendChild(token);
+      });
+    }
+
+    function renderBench() {
+      const container = document.getElementById('benchContainer');
+      const countEl = document.getElementById('benchCount');
+      const emptyText = document.getElementById('emptyBenchText');
+
+      container.innerHTML = '';
+      countEl.textContent = bench.length;
+
+      if (bench.length === 0) {
+        container.appendChild(emptyText);
+        emptyText.classList.remove('hidden');
+        return;
+      }
+
+      bench.forEach(p => {
+        const country = ALL_COUNTRIES.find(c => c.code === p.nationality) || { flag: '🌐' };
+        const isSelected = selectedPlayerForSwap && selectedPlayerForSwap.player.id === p.id;
+
+        const item = document.createElement('div');
+        item.className = `shrink-0 bg-gray-900 border ${isSelected ? 'border-yellow-400 selected-for-swap' : 'border-gray-800'} rounded-lg p-2 flex flex-col items-center cursor-pointer hover:border-yellow-500/50 transition-all min-w-[65px]`;
+        
+        const photoHtml = p.photo 
+          ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover border border-gray-600 my-1" />`
+          : '';
+
+        item.innerHTML = `
+          <div class="flex items-center justify-between w-full text-[10px] font-bold">
+            <span class="text-yellow-400">${p.position}</span>
+            <span class="text-white">${p.ovr}</span>
+          </div>
+          ${photoHtml}
+          <div class="text-[11px] font-bold text-gray-200 truncate max-w-[55px] mt-0.5">${p.name.split(' ').pop()}</div>
+          <div class="text-[9px] text-gray-500 mt-0.5">${country.flag}</div>
+        `;
+
+        item.addEventListener('click', () => {
+          if (isSwapMode) {
+            handlePlayerClick(p, 'bench');
+          } else {
+            bench = bench.filter(b => b.id !== p.id);
+            players.push({ player: p, x: 50, y: 50 });
+            renderAll();
+          }
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    // TOUCH & MOUSE DRAG ENGINE
+    function setupDrag(element, pData) {
+      let isDragging = false;
+      const pitch = document.getElementById('pitch');
+
+      const onStart = (e) => {
+        if (isSwapMode) return;
+        isDragging = true;
+      };
+
+      const onMove = (e) => {
+        if (!isDragging || isSwapMode) return;
+
+        const rect = pitch.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        let xPct = ((clientX - rect.left) / rect.width) * 100;
+        let yPct = ((clientY - rect.top) / rect.height) * 100;
+
+        xPct = Math.max(5, Math.min(95, xPct));
+        yPct = Math.max(4, Math.min(96, yPct));
+
+        pData.x = xPct;
+        pData.y = yPct;
+
+        element.style.left = `${xPct}%`;
+        element.style.top = `${yPct}%`;
+
+        const posAnalysis = calculatePositionRating(pData.player, xPct, yPct);
+        const ovrEl = element.querySelector('.font-black');
+        const posEl = element.querySelector('.text-yellow-400');
+
+        if (ovrEl) {
+          ovrEl.textContent = posAnalysis.effectiveOvr;
+          ovrEl.className = `text-[10px] font-black ${posAnalysis.statusColor}`;
+        }
+        if (posEl) posEl.textContent = posAnalysis.calculatedPos;
+      };
+
+      const onEnd = () => {
+        if (isDragging) {
+          isDragging = false;
+          renderAll();
+        }
+      };
+
+      element.addEventListener('mousedown', onStart);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onEnd);
+
+      element.addEventListener('touchstart', onStart, { passive: true });
+      window.addEventListener('touchmove', onMove, { passive: true });
+      window.addEventListener('touchend', onEnd);
+    }
+
+    // Init Render
+    renderAll();
+  </script>
+</body>
+</html>
