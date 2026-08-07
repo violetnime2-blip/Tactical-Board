@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Tactical Board</title>
+<title>Tactical Board Free-Roam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -94,11 +94,6 @@
     color:var(--text-dim);
     border:1px solid rgba(255,255,255,0.08);
   }
-  .btn-danger{
-    background:rgba(230,69,90,0.12);
-    color:var(--danger);
-    border:1px solid rgba(230,69,90,0.35);
-  }
 
   /* ===== Sections ===== */
   section.panel{
@@ -131,12 +126,6 @@
     padding:3px 10px;
     border-radius:999px;
   }
-  .empty-hint{
-    font-size:12.5px;
-    color:var(--text-dim2);
-    text-align:center;
-    padding:18px 8px;
-  }
 
   /* ===== Bench grid ===== */
   .bench-grid{
@@ -163,10 +152,10 @@
     font-size:22px;
     font-weight:300;
     cursor:pointer;
-    transition:border-color .15s, color .15s;
+    transition:border-color .15s, color .15s, background .15s;
   }
   .slot.bench-empty:hover{ border-color:var(--gold); color:var(--gold); }
-  .slot.bench-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.06); }
+  .slot.bench-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.12); }
 
   /* ===== Card ===== */
   .card{
@@ -240,8 +229,8 @@
     top:-2px; right:2px;
     width:16px; height:16px;
     border-radius:50%;
-    background:rgba(20,20,20,0.75);
-    border:1px solid rgba(255,255,255,0.15);
+    background:rgba(20,20,20,0.85);
+    border:1px solid rgba(255,255,255,0.2);
     color:#ff8b96;
     font-size:9px;
     line-height:1;
@@ -252,14 +241,7 @@
     z-index:3;
     padding:0;
   }
-  .slot.selected .avatar{
-    box-shadow:0 0 0 3px rgba(227,179,74,0.9), 0 4px 12px rgba(227,179,74,0.4);
-  }
-  .slot.drop-target .avatar,
-  .slot.drop-target.bench-empty{
-    filter:brightness(1.2);
-  }
-  .slot.dragging{ opacity:0.35; }
+  .slot.dragging, .board-player.dragging { opacity:0.25; }
 
   /* ===== Pitch ===== */
   .pitch-wrap{
@@ -276,6 +258,7 @@
       repeating-linear-gradient(0deg, var(--pitch-1) 0px, var(--pitch-1) 11%, var(--pitch-2) 11%, var(--pitch-2) 22%);
     border:2px solid rgba(255,255,255,0.15);
     box-shadow: inset 0 0 60px rgba(0,0,0,0.4);
+    touch-action: none;
   }
   .pitch::before{
     content:'';
@@ -293,29 +276,19 @@
   .pitch-lines .box-top{ position:absolute; left:22%; right:22%; top:5%; height:15%; border:1.5px solid var(--line); border-top:none; }
   .pitch-lines .box-bottom{ position:absolute; left:22%; right:22%; bottom:5%; height:15%; border:1.5px solid var(--line); border-bottom:none; }
 
-  .board-slot{
+  /* Free-roaming Player Container */
+  .board-player{
     position:absolute;
     transform:translate(-50%,-50%);
+    z-index:10;
+    cursor:grab;
+    touch-action:none;
   }
-  .board-slot .name{
+  .board-player:active{ cursor:grabbing; }
+  .board-player .name{
     color:#f4f7f5;
     text-shadow:0 1px 3px rgba(0,0,0,0.8);
   }
-  .slot.board-empty{
-    width:52px; height:52px;
-    border-radius:50%;
-    border:2px dashed rgba(255,255,255,0.35);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:'Oswald',sans-serif;
-    font-size:11px;
-    font-weight:600;
-    color:rgba(255,255,255,0.55);
-    background:rgba(0,0,0,0.15);
-  }
-  .slot.board-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.1); }
-  .slot.board-empty.selected{ box-shadow:0 0 0 3px rgba(227,179,74,0.9); }
 
   /* ===== Drag ghost ===== */
   .drag-ghost{
@@ -323,16 +296,17 @@
     top:0; left:0;
     pointer-events:none;
     z-index:999;
-    opacity:0.92;
-    transform-origin:center;
-    filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+    opacity:0.9;
+    transform-origin: top left;
+    filter:drop-shadow(0 12px 20px rgba(0,0,0,0.7));
+    will-change: transform;
   }
 
   /* ===== Modal ===== */
   .modal-backdrop{
     position:fixed; inset:0;
     background:rgba(4,7,6,0.72);
-    backdrop-filter:blur(2px);
+    backdrop-filter:blur(3px);
     display:flex;
     align-items:flex-end;
     justify-content:center;
@@ -450,7 +424,7 @@
     <h2>Starting XI</h2>
     <div style="display:flex; gap:8px; align-items:center;">
       <span class="count-pill" id="boardCount">0/11</span>
-      <button class="btn btn-ghost" id="resetBoardBtn" style="padding:6px 10px; font-size:11px;">↺ Reset</button>
+      <button class="btn btn-ghost" id="resetBoardBtn" style="padding:6px 10px; font-size:11px;">↺ Reset ke Bench</button>
     </div>
   </div>
   <div class="pitch-wrap">
@@ -491,7 +465,7 @@
         <input type="number" id="ovrInput" min="40" max="99" value="75">
       </div>
       <div>
-        <label for="posInput">Posisi</label>
+        <label for="posInput">Posisi Ideal</label>
         <select id="posInput">
           <optgroup label="Kiper">
             <option value="GK">GK</option>
@@ -500,43 +474,23 @@
             <option value="CB">CB</option>
             <option value="LB">LB</option>
             <option value="RB">RB</option>
-            <option value="LWB">LWB</option>
-            <option value="RWB">RWB</option>
           </optgroup>
           <optgroup label="Tengah">
-            <option value="CDM">CDM</option>
             <option value="CM" selected>CM</option>
             <option value="CAM">CAM</option>
             <option value="LM">LM</option>
             <option value="RM">RM</option>
           </optgroup>
           <optgroup label="Menyerang">
+            <option value="ST">ST</option>
             <option value="LW">LW</option>
             <option value="RW">RW</option>
-            <option value="CF">CF</option>
-            <option value="ST">ST</option>
           </optgroup>
         </select>
       </div>
     </div>
 
-    <div class="form-row">
-      <label for="natInput">Kebangsaan</label>
-      <input type="text" id="natInput" placeholder="cth. Prancis" maxlength="24">
-    </div>
-
-    <div class="form-grid2 form-row">
-      <div>
-        <label for="heightInput">Tinggi (cm)</label>
-        <input type="number" id="heightInput" min="140" max="220" value="178">
-      </div>
-      <div>
-        <label for="ageInput">Usia</label>
-        <input type="number" id="ageInput" min="15" max="45" value="24">
-      </div>
-    </div>
-
-    <div class="err-msg" id="errMsg">Nama wajib diisi, dan Bench sudah penuh (20/20).</div>
+    <div class="err-msg" id="errMsg">Nama wajib diisi!</div>
 
     <div class="form-actions">
       <button class="btn btn-ghost" id="cancelBtn">Batal</button>
@@ -549,41 +503,31 @@
 (function(){
   "use strict";
 
-  // ===================== CONFIG =====================
   const BENCH_SIZE = 20;
-  const BOARD_SLOTS = [
-    {id:'gk',  label:'GK', x:50, y:91, group:'gk'},
-    {id:'lb',  label:'LB', x:13, y:67, group:'def'},
-    {id:'cb1', label:'CB', x:37, y:70, group:'def'},
-    {id:'cb2', label:'CB', x:63, y:70, group:'def'},
-    {id:'rb',  label:'RB', x:87, y:67, group:'def'},
-    {id:'lm',  label:'LM', x:19, y:43, group:'mid'},
-    {id:'cm',  label:'CM', x:50, y:46, group:'mid'},
-    {id:'rm',  label:'RM', x:81, y:43, group:'mid'},
-    {id:'lw',  label:'LW', x:17, y:15, group:'att'},
-    {id:'cf',  label:'CF', x:50, y:11, group:'att'},
-    {id:'rw',  label:'RW', x:83, y:15, group:'att'},
-  ];
 
-  function defaultBoard(){
-    const o = {};
-    BOARD_SLOTS.forEach(s => o[s.id] = null);
-    return o;
-  }
+  // State Management
+  let players = {}; // id -> player data
+  let bench = new Array(BENCH_SIZE).fill(null); // array of playerId
+  let board = []; // list of { id: playerId, x: percentage, y: percentage }
 
-  // ===================== STATE =====================
-  let players = {};              // id -> player object
-  let bench = new Array(BENCH_SIZE).fill(null); // playerId | null
-  let board = defaultBoard();    // slotId -> playerId | null
-
-  // ===================== HELPERS =====================
   function uid(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-  function groupOf(pos){
-    if(pos === 'GK') return 'gk';
-    if(['CB','LB','RB','LWB','RWB'].includes(pos)) return 'def';
-    if(['CDM','CM','CAM','LM','RM'].includes(pos)) return 'mid';
-    return 'att';
+  // Auto-detect dynamic position title and group color by pitch Y coordinate
+  function getDynamicPosition(x, y) {
+    if (y > 82) return { label: 'GK', group: 'gk' };
+    if (y > 55) {
+      if (x < 30) return { label: 'LB', group: 'def' };
+      if (x > 70) return { label: 'RB', group: 'def' };
+      return { label: 'CB', group: 'def' };
+    }
+    if (y > 30) {
+      if (x < 30) return { label: 'LM', group: 'mid' };
+      if (x > 70) return { label: 'RM', group: 'mid' };
+      return { label: 'CM', group: 'mid' };
+    }
+    if (x < 30) return { label: 'LW', group: 'att' };
+    if (x > 70) return { label: 'RW', group: 'att' };
+    return { label: 'ST', group: 'att' };
   }
 
   function initials(name){
@@ -596,49 +540,53 @@
     return d.innerHTML;
   }
 
+  // Storage Handlers
   async function saveState(){
-    try{
-      await window.storage.set('tactical-board-state', JSON.stringify({players, bench, board}), false);
-    }catch(err){ /* storage unavailable — continue with in-memory state */ }
+    const payload = JSON.stringify({players, bench, board});
+    try { localStorage.setItem('tactical-board-roam-state', payload); } catch(e){}
   }
 
-  async function loadState(){
-    try{
-      const res = await window.storage.get('tactical-board-state', false);
-      if(res && res.value){
-        const data = JSON.parse(res.value);
+  function loadState(){
+    try {
+      const raw = localStorage.getItem('tactical-board-roam-state');
+      if(raw){
+        const data = JSON.parse(raw);
         players = data.players || {};
-        bench = data.bench && data.bench.length === BENCH_SIZE ? data.bench : new Array(BENCH_SIZE).fill(null);
-        board = data.board || defaultBoard();
+        bench = data.bench || new Array(BENCH_SIZE).fill(null);
+        board = data.board || [];
       }
-    }catch(err){ /* no saved state yet */ }
+    } catch(e){}
     render();
   }
 
-  // ===================== RENDER =====================
   const benchGridEl = document.getElementById('benchGrid');
   const pitchEl = document.getElementById('pitch');
-  const benchCountEl = document.getElementById('benchCount');
-  const boardCountEl = document.getElementById('boardCount');
 
-  function cardHTML(player, labelOverride, groupOverride){
-    const group = groupOverride || groupOf(player.position);
-    const label = labelOverride || player.position;
+  function cardHTML(player, dynamicPos = null){
+    const posInfo = dynamicPos || { label: player.position, group: getDynamicGroup(player.position) };
     const photo = player.photo
       ? `<img src="${player.photo}" alt="">`
       : `<span class="init">${initials(player.name || '?')}</span>`;
+
     return `
       <div class="card" data-pid="${player.id}">
-        <button class="del-btn" data-del="${player.id}" title="Hapus pemain">✕</button>
+        <button class="del-btn" data-del="${player.id}">✕</button>
         <div class="ovr-badge">${player.ovr}</div>
-        <div class="avatar" style="--ring:var(--c-${group})">${photo}</div>
-        <div class="pos-badge" style="background:var(--c-${group})">${label}</div>
+        <div class="avatar" style="--ring:var(--c-${posInfo.group})">${photo}</div>
+        <div class="pos-badge" style="background:var(--c-${posInfo.group})">${posInfo.label}</div>
         <div class="name">${escapeHtml(player.name || '')}</div>
       </div>`;
   }
 
+  function getDynamicGroup(pos) {
+    if(pos === 'GK') return 'gk';
+    if(['CB','LB','RB'].includes(pos)) return 'def';
+    if(['CM','CAM','LM','RM'].includes(pos)) return 'mid';
+    return 'att';
+  }
+
   function render(){
-    // ---- bench ----
+    // Bench Render
     let benchFilled = 0;
     benchGridEl.innerHTML = bench.map((pid, idx) => {
       if(pid && players[pid]){
@@ -647,192 +595,231 @@
       }
       return `<div class="slot bench-empty" data-type="bench" data-key="${idx}">+</div>`;
     }).join('');
-    benchCountEl.textContent = `${benchFilled}/${BENCH_SIZE}`;
+    document.getElementById('benchCount').textContent = `${benchFilled}/${BENCH_SIZE}`;
 
-    // ---- board ----
-    let boardFilled = 0;
+    // Pitch Render
     const lines = pitchEl.querySelector('.pitch-lines').outerHTML;
-    pitchEl.innerHTML = lines + BOARD_SLOTS.map(s => {
-      const pid = board[s.id];
-      let inner;
-      if(pid && players[pid]){
-        boardFilled++;
-        inner = `<div class="slot filled" data-type="board" data-key="${s.id}">${cardHTML(players[pid], s.label, s.group)}</div>`;
-      } else {
-        inner = `<div class="slot board-empty" data-type="board" data-key="${s.id}"><span>${s.label}</span></div>`;
-      }
-      return `<div class="board-slot" style="left:${s.x}%; top:${s.y}%;">${inner}</div>`;
+    const boardItemsHTML = board.map(item => {
+      const p = players[item.id];
+      if(!p) return '';
+      const dynamicPos = getDynamicPosition(item.x, item.y);
+      return `
+        <div class="board-player" style="left:${item.x}%; top:${item.y}%;" data-pid="${item.id}">
+          ${cardHTML(p, dynamicPos)}
+        </div>
+      `;
     }).join('');
-    boardCountEl.textContent = `${boardFilled}/${BOARD_SLOTS.length}`;
 
-    attachSlotHandlers();
-  }
+    pitchEl.innerHTML = lines + boardItemsHTML;
+    document.getElementById('boardCount').textContent = `${board.length}/11`;
 
-  // ===================== SLOT DATA ACCESS =====================
-  function getPlayerIdAt(type, key){
-    return type === 'bench' ? bench[key] : board[key];
-  }
-  function setPlayerIdAt(type, key, val){
-    if(type === 'bench') bench[key] = val; else board[key] = val;
-  }
-  function swapSlots(a, b){
-    if(a.type === b.type && a.key === b.key) return;
-    const pa = getPlayerIdAt(a.type, a.key);
-    const pb = getPlayerIdAt(b.type, b.key);
-    setPlayerIdAt(a.type, a.key, pb);
-    setPlayerIdAt(b.type, b.key, pa);
-    saveState();
-    render();
+    attachEvents();
   }
 
-  // ===================== DELETE PLAYER =====================
-  function deletePlayer(pid){
-    if(!confirm('Hapus pemain ini dari squad?')) return;
-    delete players[pid];
-    bench = bench.map(id => id === pid ? null : id);
-    Object.keys(board).forEach(k => { if(board[k] === pid) board[k] = null; });
-    saveState();
-    render();
-  }
-
-  // ===================== RESET BOARD =====================
-  document.getElementById('resetBoardBtn').addEventListener('click', () => {
-    const occupied = BOARD_SLOTS.map(s => board[s.id]).filter(Boolean);
-    if(occupied.length === 0) return;
-    let emptyBenchIdx = [];
-    bench.forEach((v, i) => { if(!v) emptyBenchIdx.push(i); });
-    if(emptyBenchIdx.length < occupied.length){
-      alert('Bench tidak cukup ruang kosong untuk menampung semua pemain dari lapangan.');
-      return;
-    }
-    BOARD_SLOTS.forEach(s => {
-      if(board[s.id]){
-        const pid = board[s.id];
-        const idx = emptyBenchIdx.shift();
-        bench[idx] = pid;
-        board[s.id] = null;
-      }
+  function attachEvents(){
+    // Delete buttons
+    document.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('pointerdown', e => e.stopPropagation());
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        deletePlayer(btn.dataset.del);
+      });
     });
-    saveState();
-    render();
-  });
 
-  // ===================== SELECT / DRAG INTERACTION =====================
-  let selected = null; // {type, key, el}
-  let dragState = null;
+    // Bench slot click to create
+    document.querySelectorAll('.slot.bench-empty').forEach(s => {
+      s.addEventListener('click', openCreateModal);
+    });
 
-  function clearSelection(){
-    if(selected && selected.el) selected.el.classList.remove('selected');
-    selected = null;
-  }
+    // Drag from Bench
+    document.querySelectorAll('.slot.filled .card').forEach(card => {
+      card.addEventListener('pointerdown', handleBenchDrag);
+    });
 
-  function markSelected(el, type, key){
-    clearSelection();
-    selected = {type, key, el};
-    el.classList.add('selected');
-  }
-
-  function clearDropTargets(){
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-  }
-
-  function attachSlotHandlers(){
-    document.querySelectorAll('.slot').forEach(slotEl => {
-      const type = slotEl.dataset.type;
-      const key = slotEl.dataset.type === 'bench' ? parseInt(slotEl.dataset.key, 10) : slotEl.dataset.key;
-      const filled = slotEl.classList.contains('filled');
-
-      if(filled){
-        const cardEl = slotEl.querySelector('.card');
-        cardEl.addEventListener('pointerdown', (e) => onCardPointerDown(e, slotEl, type, key));
-
-        const delBtn = slotEl.querySelector('.del-btn');
-        delBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-        delBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deletePlayer(delBtn.dataset.del);
-        });
-      } else {
-        slotEl.addEventListener('click', () => onEmptySlotTap(slotEl, type, key));
-      }
+    // Drag on Pitch
+    document.querySelectorAll('.board-player').forEach(bp => {
+      bp.addEventListener('pointerdown', handlePitchDrag);
     });
   }
 
-  function onEmptySlotTap(slotEl, type, key){
-    if(selected){
-      swapSlots(selected, {type, key});
-      clearSelection();
-      return;
-    }
-    if(type === 'bench'){
-      openCreateModal();
-    }
-  }
-
-  function onCardPointerDown(e, slotEl, type, key){
+  // DRAG & DROP LOGIC: BENCH -> PITCH / BENCH -> BENCH
+  function handleBenchDrag(e){
+    if(e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault();
+
     const cardEl = e.currentTarget;
+    const slotEl = cardEl.closest('.slot');
+    const benchIndex = parseInt(slotEl.dataset.key, 10);
+    const pid = bench[benchIndex];
+
     const startX = e.clientX, startY = e.clientY;
+    const rect = cardEl.getBoundingClientRect();
+    const offsetX = startX - rect.left;
+    const offsetY = startY - rect.top;
+
     let dragging = false;
     let ghost = null;
 
     function onMove(ev){
-      const dx = ev.clientX - startX, dy = ev.clientY - startY;
-      if(!dragging && Math.hypot(dx, dy) > 8){
+      if(!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5){
         dragging = true;
         slotEl.classList.add('dragging');
-        const rect = cardEl.getBoundingClientRect();
         ghost = cardEl.cloneNode(true);
         ghost.classList.add('drag-ghost');
         ghost.style.width = rect.width + 'px';
-        ghost.querySelectorAll('.del-btn').forEach(b => b.remove());
         document.body.appendChild(ghost);
       }
+
       if(dragging && ghost){
-        ghost.style.transform = `translate(${ev.clientX - 26}px, ${ev.clientY - 26}px)`;
-        clearDropTargets();
-        const under = document.elementFromPoint(ev.clientX, ev.clientY);
-        const targetSlot = under ? under.closest('.slot') : null;
-        if(targetSlot && targetSlot !== slotEl) targetSlot.classList.add('drop-target');
+        ghost.style.transform = `translate(${ev.clientX - offsetX}px, ${ev.clientY - offsetY}px)`;
       }
     }
 
     function onUp(ev){
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
-      document.removeEventListener('pointercancel', onUp);
 
       if(dragging){
         slotEl.classList.remove('dragging');
         if(ghost) ghost.remove();
-        clearDropTargets();
-        const under = document.elementFromPoint(ev.clientX, ev.clientY);
-        const targetSlot = under ? under.closest('.slot') : null;
-        if(targetSlot && targetSlot !== slotEl){
-          const tType = targetSlot.dataset.type;
-          const tKey = tType === 'bench' ? parseInt(targetSlot.dataset.key, 10) : targetSlot.dataset.key;
-          swapSlots({type, key}, {type: tType, key: tKey});
-        }
-        clearSelection();
-      } else {
-        // plain tap -> selection mode
-        if(selected && selected.type === type && String(selected.key) === String(key)){
-          clearSelection();
-        } else if(selected){
-          swapSlots(selected, {type, key});
-          clearSelection();
+
+        const pitchRect = pitchEl.getBoundingClientRect();
+        // Check if dropped inside Pitch
+        if(ev.clientX >= pitchRect.left && ev.clientX <= pitchRect.right &&
+           ev.clientY >= pitchRect.top && ev.clientY <= pitchRect.bottom){
+          
+          const xPct = Math.min(92, Math.max(8, ((ev.clientX - pitchRect.left) / pitchRect.width) * 100));
+          const yPct = Math.min(92, Math.max(8, ((ev.clientY - pitchRect.top) / pitchRect.height) * 100));
+
+          // Move from Bench to Board
+          bench[benchIndex] = null;
+          board.push({ id: pid, x: xPct, y: yPct });
+          saveState();
+          render();
         } else {
-          markSelected(slotEl, type, key);
+          // Check if dropped on another bench slot
+          const under = document.elementFromPoint(ev.clientX, ev.clientY);
+          const targetSlot = under ? under.closest('.slot') : null;
+          if(targetSlot && targetSlot !== slotEl){
+            const targetIdx = parseInt(targetSlot.dataset.key, 10);
+            const targetPid = bench[targetIdx];
+            bench[targetIdx] = pid;
+            bench[benchIndex] = targetPid;
+            saveState();
+            render();
+          }
         }
       }
     }
 
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
-    document.addEventListener('pointercancel', onUp);
   }
 
-  // ===================== CREATE PLAYER MODAL =====================
+  // DRAG & DROP LOGIC: PITCH (FREE ROAM)
+  function handlePitchDrag(e){
+    if(e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault();
+
+    const playerEl = e.currentTarget;
+    const pid = playerEl.dataset.pid;
+    const boardItem = board.find(b => b.id === pid);
+    if(!boardItem) return;
+
+    const pitchRect = pitchEl.getBoundingClientRect();
+    let dragging = false;
+
+    function onMove(ev){
+      if(!dragging) {
+        dragging = true;
+        playerEl.classList.add('dragging');
+      }
+
+      // Calculate percentage inside pitch limits
+      let x = ((ev.clientX - pitchRect.left) / pitchRect.width) * 100;
+      let y = ((ev.clientY - pitchRect.top) / pitchRect.height) * 100;
+
+      // Clamp limits so player card doesn't overflow pitch
+      x = Math.min(92, Math.max(8, x));
+      y = Math.min(92, Math.max(8, y));
+
+      playerEl.style.left = x + '%';
+      playerEl.style.top = y + '%';
+
+      boardItem.x = x;
+      boardItem.y = y;
+
+      // Live update dynamic badge position
+      const dynamicPos = getDynamicPosition(x, y);
+      const posBadge = playerEl.querySelector('.pos-badge');
+      const avatar = playerEl.querySelector('.avatar');
+      if(posBadge){
+        posBadge.textContent = dynamicPos.label;
+        posBadge.style.background = `var(--c-${dynamicPos.group})`;
+      }
+      if(avatar){
+        avatar.style.setProperty('--ring', `var(--c-${dynamicPos.group})`);
+      }
+    }
+
+    function onUp(ev){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+
+      if(dragging){
+        playerEl.classList.remove('dragging');
+
+        // Check if dragged OUT of pitch (Send back to Bench)
+        if(ev.clientX < pitchRect.left || ev.clientX > pitchRect.right ||
+           ev.clientY < pitchRect.top || ev.clientY > pitchRect.bottom){
+          
+          const emptyBenchIdx = bench.indexOf(null);
+          if(emptyBenchIdx !== -1){
+            board = board.filter(b => b.id !== pid);
+            bench[emptyBenchIdx] = pid;
+          } else {
+            alert('Bench penuh! Hapus atau pindahkan pemain dulu.');
+          }
+        }
+        saveState();
+        render();
+      }
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }
+
+  function deletePlayer(pid){
+    if(!confirm('Hapus pemain ini?')) return;
+    delete players[pid];
+    bench = bench.map(id => id === pid ? null : id);
+    board = board.filter(b => b.id !== pid);
+    saveState();
+    render();
+  }
+
+  // Reset Pitch to Bench
+  document.getElementById('resetBoardBtn').addEventListener('click', () => {
+    if(board.length === 0) return;
+    let emptyBenchIdx = [];
+    bench.forEach((v, i) => { if(!v) emptyBenchIdx.push(i); });
+
+    if(emptyBenchIdx.length < board.length){
+      alert('Bench tidak muat untuk menampung semua pemain dari lapangan.');
+      return;
+    }
+
+    board.forEach(item => {
+      const idx = emptyBenchIdx.shift();
+      bench[idx] = item.id;
+    });
+    board = [];
+    saveState();
+    render();
+  });
+
+  // Modal Handlers
   const backdrop = document.getElementById('modalBackdrop');
   const photoPicker = document.getElementById('photoPicker');
   const photoInput = document.getElementById('photoInput');
@@ -840,9 +827,6 @@
   const nameInput = document.getElementById('nameInput');
   const ovrInput = document.getElementById('ovrInput');
   const posInput = document.getElementById('posInput');
-  const natInput = document.getElementById('natInput');
-  const heightInput = document.getElementById('heightInput');
-  const ageInput = document.getElementById('ageInput');
   const errMsg = document.getElementById('errMsg');
   let pendingPhoto = null;
 
@@ -850,47 +834,32 @@
     nameInput.value = '';
     ovrInput.value = 75;
     posInput.value = 'CM';
-    natInput.value = '';
-    heightInput.value = 178;
-    ageInput.value = 24;
     pendingPhoto = null;
     photoHint.style.display = '';
-    const existingImg = photoPicker.querySelector('img');
-    if(existingImg) existingImg.remove();
+    const old = photoPicker.querySelector('img');
+    if(old) old.remove();
     errMsg.style.display = 'none';
     backdrop.classList.remove('hidden');
-    setTimeout(() => nameInput.focus(), 50);
   }
+
   function closeModal(){ backdrop.classList.add('hidden'); }
 
   document.getElementById('openCreateBtn').addEventListener('click', openCreateModal);
   document.getElementById('closeModalBtn').addEventListener('click', closeModal);
   document.getElementById('cancelBtn').addEventListener('click', closeModal);
-  backdrop.addEventListener('click', (e) => { if(e.target === backdrop) closeModal(); });
 
   photoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const size = 220;
-        const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        const s = Math.min(img.width, img.height);
-        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
-        pendingPhoto = canvas.toDataURL('image/jpeg', 0.85);
-        photoHint.style.display = 'none';
-        const old = photoPicker.querySelector('img');
-        if(old) old.remove();
-        const imgEl = document.createElement('img');
-        imgEl.src = pendingPhoto;
-        photoPicker.insertBefore(imgEl, photoInput);
-      };
-      img.src = ev.target.result;
+      pendingPhoto = ev.target.result;
+      photoHint.style.display = 'none';
+      const old = photoPicker.querySelector('img');
+      if(old) old.remove();
+      const imgEl = document.createElement('img');
+      imgEl.src = pendingPhoto;
+      photoPicker.insertBefore(imgEl, photoInput);
     };
     reader.readAsDataURL(file);
   });
@@ -900,9 +869,7 @@
     const emptyIdx = bench.indexOf(null);
 
     if(!name || emptyIdx === -1){
-      errMsg.textContent = !name
-        ? 'Nama pemain wajib diisi.'
-        : 'Bench sudah penuh (20/20). Pindahkan pemain ke lapangan atau hapus pemain lain dulu.';
+      errMsg.textContent = !name ? 'Nama wajib diisi.' : 'Bench penuh!';
       errMsg.style.display = 'block';
       return;
     }
@@ -910,12 +877,9 @@
     const player = {
       id: uid(),
       name,
-      ovr: Math.max(40, Math.min(99, parseInt(ovrInput.value, 10) || 75)),
+      ovr: parseInt(ovrInput.value, 10) || 75,
       position: posInput.value,
-      nationality: natInput.value.trim(),
-      height: parseInt(heightInput.value, 10) || null,
-      age: parseInt(ageInput.value, 10) || null,
-      photo: pendingPhoto,
+      photo: pendingPhoto
     };
 
     players[player.id] = player;
@@ -925,7 +889,6 @@
     closeModal();
   });
 
-  // ===================== INIT =====================
   loadState();
 })();
 </script>
