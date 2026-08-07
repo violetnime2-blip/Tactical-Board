@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Tactical Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0d;
+    --panel:#121c18;
+    --panel-2:#17231d;
+    --pitch-1:#1d5c40;
+    --pitch-2:#194f37;
+    --line: rgba(255,255,255,0.28);
+    --text:#eef5f1;
+    --text-dim:#8fa79e;
+    --text-dim2:#5f766e;
+    --c-gk:#a855f7;
+    --c-def:#22c55e;
+    --c-mid:#f5a524;
+    --c-att:#ef4553;
+    --gold:#e3b34a;
+    --danger:#e6455a;
+    --radius:14px;
+    --shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(227,179,74,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+  }
+
+  /* ===== Header ===== */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 16px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  header .brand{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  header .brand .eyebrow{
+    font-size:10.5px;
+    letter-spacing:0.22em;
+    color:var(--gold);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+  header .brand h1{
+    font-size:20px;
+    margin:0;
+    font-weight:700;
+    color:var(--text);
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    border:none;
+    border-radius:10px;
+    padding:10px 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform:scale(0.96); }
+  .btn-primary{
+    background:linear-gradient(180deg,#f0c264,var(--gold));
+    color:#25190a;
+  }
+  .btn-primary:hover{ filter:brightness(1.05); }
+  .btn-ghost{
+    background:var(--panel-2);
+    color:var(--text-dim);
+    border:1px solid rgba(255,255,255,0.08);
+  }
+  .btn-danger{
+    background:rgba(230,69,90,0.12);
+    color:var(--danger);
+    border:1px solid rgba(230,69,90,0.35);
+  }
+
+  /* ===== Sections ===== */
+  section.panel{
+    margin:18px 14px 0;
+    background:var(--panel);
+    border-radius:18px;
+    padding:16px 14px 18px;
+    border:1px solid rgba(255,255,255,0.05);
+  }
+  .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .panel-head h2{
+    font-size:13px;
+    margin:0;
+    color:var(--text-dim);
+    font-weight:600;
+    letter-spacing:0.14em;
+  }
+  .count-pill{
+    font-family:'Inter',sans-serif;
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--text);
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.08);
+    padding:3px 10px;
+    border-radius:999px;
+  }
+  .empty-hint{
+    font-size:12.5px;
+    color:var(--text-dim2);
+    text-align:center;
+    padding:18px 8px;
+  }
+
+  /* ===== Bench grid ===== */
+  .bench-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(66px,1fr));
+    gap:10px 8px;
+  }
+  .slot{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .slot.bench-empty{
+    aspect-ratio:1/1.15;
+    border:1.5px dashed rgba(255,255,255,0.14);
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--text-dim2);
+    font-size:22px;
+    font-weight:300;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .slot.bench-empty:hover{ border-color:var(--gold); color:var(--gold); }
+  .slot.bench-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.06); }
+
+  /* ===== Card ===== */
+  .card{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    cursor:grab;
+    touch-action:none;
+    padding-top:10px;
+  }
+  .card:active{ cursor:grabbing; }
+  .ovr-badge{
+    position:absolute;
+    top:-4px;
+    background:#0d1512;
+    color:var(--gold);
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    padding:1px 7px;
+    border-radius:8px;
+    border:1px solid rgba(227,179,74,0.35);
+    z-index:2;
+  }
+  .avatar{
+    width:52px; height:52px;
+    border-radius:50%;
+    border:2.5px solid var(--ring, var(--c-def));
+    box-shadow:0 0 0 3px rgba(0,0,0,0.35), 0 4px 10px rgba(0,0,0,0.4);
+    overflow:hidden;
+    background:#20302a;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .avatar .init{
+    font-family:'Oswald',sans-serif;
+    font-size:16px;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .pos-badge{
+    margin-top:-9px;
+    font-family:'Oswald',sans-serif;
+    font-size:10px;
+    font-weight:700;
+    color:#0d1512;
+    padding:1px 7px;
+    border-radius:6px;
+    z-index:2;
+    letter-spacing:0.02em;
+  }
+  .name{
+    margin-top:5px;
+    font-size:10px;
+    font-weight:700;
+    color:var(--text);
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    text-align:center;
+    max-width:70px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .del-btn{
+    position:absolute;
+    top:-2px; right:2px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:rgba(20,20,20,0.75);
+    border:1px solid rgba(255,255,255,0.15);
+    color:#ff8b96;
+    font-size:9px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:3;
+    padding:0;
+  }
+  .slot.selected .avatar{
+    box-shadow:0 0 0 3px rgba(227,179,74,0.9), 0 4px 12px rgba(227,179,74,0.4);
+  }
+  .slot.drop-target .avatar,
+  .slot.drop-target.bench-empty{
+    filter:brightness(1.2);
+  }
+  .slot.dragging{ opacity:0.35; }
+
+  /* ===== Pitch ===== */
+  .pitch-wrap{
+    max-width:440px;
+    margin:0 auto;
+  }
+  .pitch{
+    position:relative;
+    width:100%;
+    aspect-ratio: 0.66;
+    border-radius:16px;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(0deg, var(--pitch-1) 0px, var(--pitch-1) 11%, var(--pitch-2) 11%, var(--pitch-2) 22%);
+    border:2px solid rgba(255,255,255,0.15);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.4);
+  }
+  .pitch::before{
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse 400px 220px at 50% 4%, rgba(255,255,255,0.10), transparent 65%);
+    pointer-events:none;
+  }
+  .pitch-lines{
+    position:absolute; inset:0;
+    pointer-events:none;
+  }
+  .pitch-lines .outer{ position:absolute; inset:5%; border:1.5px solid var(--line); }
+  .pitch-lines .mid{ position:absolute; left:5%; right:5%; top:50%; border-top:1.5px solid var(--line); }
+  .pitch-lines .circle{ position:absolute; left:50%; top:50%; width:26%; aspect-ratio:1; border:1.5px solid var(--line); border-radius:50%; transform:translate(-50%,-50%); }
+  .pitch-lines .box-top{ position:absolute; left:22%; right:22%; top:5%; height:15%; border:1.5px solid var(--line); border-top:none; }
+  .pitch-lines .box-bottom{ position:absolute; left:22%; right:22%; bottom:5%; height:15%; border:1.5px solid var(--line); border-bottom:none; }
+
+  .board-slot{
+    position:absolute;
+    transform:translate(-50%,-50%);
+  }
+  .board-slot .name{
+    color:#f4f7f5;
+    text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  }
+  .slot.board-empty{
+    width:52px; height:52px;
+    border-radius:50%;
+    border:2px dashed rgba(255,255,255,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    color:rgba(255,255,255,0.55);
+    background:rgba(0,0,0,0.15);
+  }
+  .slot.board-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.1); }
+  .slot.board-empty.selected{ box-shadow:0 0 0 3px rgba(227,179,74,0.9); }
+
+  /* ===== Drag ghost ===== */
+  .drag-ghost{
+    position:fixed;
+    top:0; left:0;
+    pointer-events:none;
+    z-index:999;
+    opacity:0.92;
+    transform-origin:center;
+    filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+  }
+
+  /* ===== Modal ===== */
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(4,7,6,0.72);
+    backdrop-filter:blur(2px);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+  }
+  .modal-backdrop.hidden{ display:none; }
+  .modal{
+    background:var(--panel);
+    width:100%;
+    max-width:480px;
+    border-radius:20px 20px 0 0;
+    padding:18px 18px 26px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .modal-head h2{ font-size:16px; margin:0; color:var(--text); }
+  .modal-close{
+    background:none; border:none; color:var(--text-dim);
+    font-size:20px; cursor:pointer; line-height:1; padding:4px;
+  }
+
+  .photo-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:16px;
+  }
+  .photo-picker{
+    width:76px; height:76px;
+    border-radius:50%;
+    border:2px dashed rgba(255,255,255,0.25);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--text-dim2);
+    font-size:11px;
+    text-align:center;
+    cursor:pointer;
+    overflow:hidden;
+    flex-shrink:0;
+    position:relative;
+    background:var(--panel-2);
+  }
+  .photo-picker img{ width:100%; height:100%; object-fit:cover; }
+  .photo-picker input{ display:none; }
+  .photo-picker .hint{ padding:4px; }
+  .field-group{ flex:1; display:flex; flex-direction:column; gap:4px; }
+
+  label{
+    font-size:11px;
+    font-weight:600;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  input[type=text], input[type=number], select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+    margin-top:4px;
+  }
+  input:focus, select:focus{ outline:1.5px solid var(--gold); }
+  .form-row{ margin-bottom:14px; }
+  .form-grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .form-actions{
+    display:flex;
+    gap:10px;
+    margin-top:8px;
+  }
+  .form-actions .btn{ flex:1; justify-content:center; }
+  .err-msg{
+    color:var(--danger);
+    font-size:12px;
+    margin:-6px 0 12px;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="eyebrow">Squad Manager</span>
+    <h1>Tactical Board</h1>
+  </div>
+  <button class="btn btn-primary" id="openCreateBtn">+ Buat Pemain</button>
+</header>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Bench</h2>
+    <span class="count-pill" id="benchCount">0/20</span>
+  </div>
+  <div id="benchGrid" class="bench-grid"></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Starting XI</h2>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span class="count-pill" id="boardCount">0/11</span>
+      <button class="btn btn-ghost" id="resetBoardBtn" style="padding:6px 10px; font-size:11px;">↺ Reset</button>
+    </div>
+  </div>
+  <div class="pitch-wrap">
+    <div class="pitch" id="pitch">
+      <div class="pitch-lines">
+        <div class="outer"></div>
+        <div class="mid"></div>
+        <div class="circle"></div>
+        <div class="box-top"></div>
+        <div class="box-bottom"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Create Player Modal ===== -->
+<div class="modal-backdrop hidden" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Buat Pemain</h2>
+      <button class="modal-close" id="closeModalBtn">&times;</button>
+    </div>
+
+    <div class="photo-row">
+      <label class="photo-picker" id="photoPicker">
+        <span class="hint" id="photoHint">Foto<br>1:1</span>
+        <input type="file" accept="image/*" id="photoInput">
+      </label>
+      <div class="field-group">
+        <label for="nameInput">Nama</label>
+        <input type="text" id="nameInput" placeholder="cth. Kylian Mbappe" maxlength="24">
+      </div>
+    </div>
+
+    <div class="form-grid2 form-row">
+      <div>
+        <label for="ovrInput">OVR</label>
+        <input type="number" id="ovrInput" min="40" max="99" value="75">
+      </div>
+      <div>
+        <label for="posInput">Posisi</label>
+        <select id="posInput">
+          <optgroup label="Kiper">
+            <option value="GK">GK</option>
+          </optgroup>
+          <optgroup label="Bertahan">
+            <option value="CB">CB</option>
+            <option value="LB">LB</option>
+            <option value="RB">RB</option>
+            <option value="LWB">LWB</option>
+            <option value="RWB">RWB</option>
+          </optgroup>
+          <optgroup label="Tengah">
+            <option value="CDM">CDM</option>
+            <option value="CM" selected>CM</option>
+            <option value="CAM">CAM</option>
+            <option value="LM">LM</option>
+            <option value="RM">RM</option>
+          </optgroup>
+          <optgroup label="Menyerang">
+            <option value="LW">LW</option>
+            <option value="RW">RW</option>
+            <option value="CF">CF</option>
+            <option value="ST">ST</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label for="natInput">Kebangsaan</label>
+      <input type="text" id="natInput" placeholder="cth. Prancis" maxlength="24">
+    </div>
+
+    <div class="form-grid2 form-row">
+      <div>
+        <label for="heightInput">Tinggi (cm)</label>
+        <input type="number" id="heightInput" min="140" max="220" value="178">
+      </div>
+      <div>
+        <label for="ageInput">Usia</label>
+        <input type="number" id="ageInput" min="15" max="45" value="24">
+      </div>
+    </div>
+
+    <div class="err-msg" id="errMsg">Nama wajib diisi, dan Bench sudah penuh (20/20).</div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" id="cancelBtn">Batal</button>
+      <button class="btn btn-primary" id="saveBtn">Simpan ke Bench</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===================== CONFIG =====================
+  const BENCH_SIZE = 20;
+  const BOARD_SLOTS = [
+    {id:'gk',  label:'GK', x:50, y:91, group:'gk'},
+    {id:'lb',  label:'LB', x:13, y:67, group:'def'},
+    {id:'cb1', label:'CB', x:37, y:70, group:'def'},
+    {id:'cb2', label:'CB', x:63, y:70, group:'def'},
+    {id:'rb',  label:'RB', x:87, y:67, group:'def'},
+    {id:'lm',  label:'LM', x:19, y:43, group:'mid'},
+    {id:'cm',  label:'CM', x:50, y:46, group:'mid'},
+    {id:'rm',  label:'RM', x:81, y:43, group:'mid'},
+    {id:'lw',  label:'LW', x:17, y:15, group:'att'},
+    {id:'cf',  label:'CF', x:50, y:11, group:'att'},
+    {id:'rw',  label:'RW', x:83, y:15, group:'att'},
+  ];
+
+  function defaultBoard(){
+    const o = {};
+    BOARD_SLOTS.forEach(s => o[s.id] = null);
+    return o;
+  }
+
+  // ===================== STATE =====================
+  let players = {};              // id -> player object
+  let bench = new Array(BENCH_SIZE).fill(null); // playerId | null
+  let board = defaultBoard();    // slotId -> playerId | null
+
+  // ===================== HELPERS =====================
+  function uid(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function groupOf(pos){
+    if(pos === 'GK') return 'gk';
+    if(['CB','LB','RB','LWB','RWB'].includes(pos)) return 'def';
+    if(['CDM','CM','CAM','LM','RM'].includes(pos)) return 'mid';
+    return 'att';
+  }
+
+  function initials(name){
+    return name.trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  async function saveState(){
+    try{
+      await window.storage.set('tactical-board-state', JSON.stringify({players, bench, board}), false);
+    }catch(err){ /* storage unavailable — continue with in-memory state */ }
+  }
+
+  async function loadState(){
+    try{
+      const res = await window.storage.get('tactical-board-state', false);
+      if(res && res.value){
+        const data = JSON.parse(res.value);
+        players = data.players || {};
+        bench = data.bench && data.bench.length === BENCH_SIZE ? data.bench : new Array(BENCH_SIZE).fill(null);
+        board = data.board || defaultBoard();
+      }
+    }catch(err){ /* no saved state yet */ }
+    render();
+  }
+
+  // ===================== RENDER =====================
+  const benchGridEl = document.getElementById('benchGrid');
+  const pitchEl = document.getElementById('pitch');
+  const benchCountEl = document.getElementById('benchCount');
+  const boardCountEl = document.getElementById('boardCount');
+
+  function cardHTML(player, labelOverride, groupOverride){
+    const group = groupOverride || groupOf(player.position);
+    const label = labelOverride || player.position;
+    const photo = player.photo
+      ? `<img src="${player.photo}" alt="">`
+      : `<span class="init">${initials(player.name || '?')}</span>`;
+    return `
+      <div class="card" data-pid="${player.id}">
+        <button class="del-btn" data-del="${player.id}" title="Hapus pemain">✕</button>
+        <div class="ovr-badge">${player.ovr}</div>
+        <div class="avatar" style="--ring:var(--c-${group})">${photo}</div>
+        <div class="pos-badge" style="background:var(--c-${group})">${label}</div>
+        <div class="name">${escapeHtml(player.name || '')}</div>
+      </div>`;
+  }
+
+  function render(){
+    // ---- bench ----
+    let benchFilled = 0;
+    benchGridEl.innerHTML = bench.map((pid, idx) => {
+      if(pid && players[pid]){
+        benchFilled++;
+        return `<div class="slot filled" data-type="bench" data-key="${idx}">${cardHTML(players[pid])}</div>`;
+      }
+      return `<div class="slot bench-empty" data-type="bench" data-key="${idx}">+</div>`;
+    }).join('');
+    benchCountEl.textContent = `${benchFilled}/${BENCH_SIZE}`;
+
+    // ---- board ----
+    let boardFilled = 0;
+    const lines = pitchEl.querySelector('.pitch-lines').outerHTML;
+    pitchEl.innerHTML = lines + BOARD_SLOTS.map(s => {
+      const pid = board[s.id];
+      let inner;
+      if(pid && players[pid]){
+        boardFilled++;
+        inner = `<div class="slot filled" data-type="board" data-key="${s.id}">${cardHTML(players[pid], s.label, s.group)}</div>`;
+      } else {
+        inner = `<div class="slot board-empty" data-type="board" data-key="${s.id}"><span>${s.label}</span></div>`;
+      }
+      return `<div class="board-slot" style="left:${s.x}%; top:${s.y}%;">${inner}</div>`;
+    }).join('');
+    boardCountEl.textContent = `${boardFilled}/${BOARD_SLOTS.length}`;
+
+    attachSlotHandlers();
+  }
+
+  // ===================== SLOT DATA ACCESS =====================
+  function getPlayerIdAt(type, key){
+    return type === 'bench' ? bench[key] : board[key];
+  }
+  function setPlayerIdAt(type, key, val){
+    if(type === 'bench') bench[key] = val; else board[key] = val;
+  }
+  function swapSlots(a, b){
+    if(a.type === b.type && a.key === b.key) return;
+    const pa = getPlayerIdAt(a.type, a.key);
+    const pb = getPlayerIdAt(b.type, b.key);
+    setPlayerIdAt(a.type, a.key, pb);
+    setPlayerIdAt(b.type, b.key, pa);
+    saveState();
+    render();
+  }
+
+  // ===================== DELETE PLAYER =====================
+  function deletePlayer(pid){
+    if(!confirm('Hapus pemain ini dari squad?')) return;
+    delete players[pid];
+    bench = bench.map(id => id === pid ? null : id);
+    Object.keys(board).forEach(k => { if(board[k] === pid) board[k] = null; });
+    saveState();
+    render();
+  }
+
+  // ===================== RESET BOARD =====================
+  document.getElementById('resetBoardBtn').addEventListener('click', () => {
+    const occupied = BOARD_SLOTS.map(s => board[s.id]).filter(Boolean);
+    if(occupied.length === 0) return;
+    let emptyBenchIdx = [];
+    bench.forEach((v, i) => { if(!v) emptyBenchIdx.push(i); });
+    if(emptyBenchIdx.length < occupied.length){
+      alert('Bench tidak cukup ruang kosong untuk menampung semua pemain dari lapangan.');
+      return;
+    }
+    BOARD_SLOTS.forEach(s => {
+      if(board[s.id]){
+        const pid = board[s.id];
+        const idx = emptyBenchIdx.shift();
+        bench[idx] = pid;
+        board[s.id] = null;
+      }
+    });
+    saveState();
+    render();
+  });
+
+  // ===================== SELECT / DRAG INTERACTION =====================
+  let selected = null; // {type, key, el}
+  let dragState = null;
+
+  function clearSelection(){
+    if(selected && selected.el) selected.el.classList.remove('selected');
+    selected = null;
+  }
+
+  function markSelected(el, type, key){
+    clearSelection();
+    selected = {type, key, el};
+    el.classList.add('selected');
+  }
+
+  function clearDropTargets(){
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  }
+
+  function attachSlotHandlers(){
+    document.querySelectorAll('.slot').forEach(slotEl => {
+      const type = slotEl.dataset.type;
+      const key = slotEl.dataset.type === 'bench' ? parseInt(slotEl.dataset.key, 10) : slotEl.dataset.key;
+      const filled = slotEl.classList.contains('filled');
+
+      if(filled){
+        const cardEl = slotEl.querySelector('.card');
+        cardEl.addEventListener('pointerdown', (e) => onCardPointerDown(e, slotEl, type, key));
+
+        const delBtn = slotEl.querySelector('.del-btn');
+        delBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deletePlayer(delBtn.dataset.del);
+        });
+      } else {
+        slotEl.addEventListener('click', () => onEmptySlotTap(slotEl, type, key));
+      }
+    });
+  }
+
+  function onEmptySlotTap(slotEl, type, key){
+    if(selected){
+      swapSlots(selected, {type, key});
+      clearSelection();
+      return;
+    }
+    if(type === 'bench'){
+      openCreateModal();
+    }
+  }
+
+  function onCardPointerDown(e, slotEl, type, key){
+    e.preventDefault();
+    const cardEl = e.currentTarget;
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    let ghost = null;
+
+    function onMove(ev){
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!dragging && Math.hypot(dx, dy) > 8){
+        dragging = true;
+        slotEl.classList.add('dragging');
+        const rect = cardEl.getBoundingClientRect();
+        ghost = cardEl.cloneNode(true);
+        ghost.classList.add('drag-ghost');
+        ghost.style.width = rect.width + 'px';
+        ghost.querySelectorAll('.del-btn').forEach(b => b.remove());
+        document.body.appendChild(ghost);
+      }
+      if(dragging && ghost){
+        ghost.style.transform = `translate(${ev.clientX - 26}px, ${ev.clientY - 26}px)`;
+        clearDropTargets();
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const targetSlot = under ? under.closest('.slot') : null;
+        if(targetSlot && targetSlot !== slotEl) targetSlot.classList.add('drop-target');
+      }
+    }
+
+    function onUp(ev){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+
+      if(dragging){
+        slotEl.classList.remove('dragging');
+        if(ghost) ghost.remove();
+        clearDropTargets();
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const targetSlot = under ? under.closest('.slot') : null;
+        if(targetSlot && targetSlot !== slotEl){
+          const tType = targetSlot.dataset.type;
+          const tKey = tType === 'bench' ? parseInt(targetSlot.dataset.key, 10) : targetSlot.dataset.key;
+          swapSlots({type, key}, {type: tType, key: tKey});
+        }
+        clearSelection();
+      } else {
+        // plain tap -> selection mode
+        if(selected && selected.type === type && String(selected.key) === String(key)){
+          clearSelection();
+        } else if(selected){
+          swapSlots(selected, {type, key});
+          clearSelection();
+        } else {
+          markSelected(slotEl, type, key);
+        }
+      }
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  // ===================== CREATE PLAYER MODAL =====================
+  const backdrop = document.getElementById('modalBackdrop');
+  const photoPicker = document.getElementById('photoPicker');
+  const photoInput = document.getElementById('photoInput');
+  const photoHint = document.getElementById('photoHint');
+  const nameInput = document.getElementById('nameInput');
+  const ovrInput = document.getElementById('ovrInput');
+  const posInput = document.getElementById('posInput');
+  const natInput = document.getElementById('natInput');
+  const heightInput = document.getElementById('heightInput');
+  const ageInput = document.getElementById('ageInput');
+  const errMsg = document.getElementById('errMsg');
+  let pendingPhoto = null;
+
+  function openCreateModal(){
+    nameInput.value = '';
+    ovrInput.value = 75;
+    posInput.value = 'CM';
+    natInput.value = '';
+    heightInput.value = 178;
+    ageInput.value = 24;
+    pendingPhoto = null;
+    photoHint.style.display = '';
+    const existingImg = photoPicker.querySelector('img');
+    if(existingImg) existingImg.remove();
+    errMsg.style.display = 'none';
+    backdrop.classList.remove('hidden');
+    setTimeout(() => nameInput.focus(), 50);
+  }
+  function closeModal(){ backdrop.classList.add('hidden'); }
+
+  document.getElementById('openCreateBtn').addEventListener('click', openCreateModal);
+  document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => { if(e.target === backdrop) closeModal(); });
+
+  photoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 220;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        pendingPhoto = canvas.toDataURL('image/jpeg', 0.85);
+        photoHint.style.display = 'none';
+        const old = photoPicker.querySelector('img');
+        if(old) old.remove();
+        const imgEl = document.createElement('img');
+        imgEl.src = pendingPhoto;
+        photoPicker.insertBefore(imgEl, photoInput);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    const emptyIdx = bench.indexOf(null);
+
+    if(!name || emptyIdx === -1){
+      errMsg.textContent = !name
+        ? 'Nama pemain wajib diisi.'
+        : 'Bench sudah penuh (20/20). Pindahkan pemain ke lapangan atau hapus pemain lain dulu.';
+      errMsg.style.display = 'block';
+      return;
+    }
+
+    const player = {
+      id: uid(),
+      name,
+      ovr: Math.max(40, Math.min(99, parseInt(ovrInput.value, 10) || 75)),
+      position: posInput.value,
+      nationality: natInput.value.trim(),
+      height: parseInt(heightInput.value, 10) || null,
+      age: parseInt(ageInput.value, 10) || null,
+      photo: pendingPhoto,
+    };
+
+    players[player.id] = player;
+    bench[emptyIdx] = player.id;
+    saveState();
+    render();
+    closeModal();
+  });
+
+  // ===================== INIT =====================
+  loadState();
+})();
+</script>
+</body>
+</html>
