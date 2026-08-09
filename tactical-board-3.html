@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Tactical Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0d;
+    --panel:#121c18;
+    --panel-2:#17231d;
+    --pitch-1:#1d5c40;
+    --pitch-2:#194f37;
+    --line: rgba(255,255,255,0.28);
+    --text:#eef5f1;
+    --text-dim:#8fa79e;
+    --text-dim2:#5f766e;
+    --c-gk:#a855f7;
+    --c-def:#22c55e;
+    --c-mid:#f5a524;
+    --c-att:#ef4553;
+    --gold:#e3b34a;
+    --danger:#e6455a;
+    --radius:14px;
+    --shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(227,179,74,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+  }
+
+  /* ===== Header ===== */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 16px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  header .brand{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  header .brand .eyebrow{
+    font-size:10.5px;
+    letter-spacing:0.22em;
+    color:var(--gold);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+  header .brand h1{
+    font-size:20px;
+    margin:0;
+    font-weight:700;
+    color:var(--text);
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    border:none;
+    border-radius:10px;
+    padding:10px 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform:scale(0.96); }
+  .btn-primary{
+    background:linear-gradient(180deg,#f0c264,var(--gold));
+    color:#25190a;
+  }
+  .btn-primary:hover{ filter:brightness(1.05); }
+  .btn-ghost{
+    background:var(--panel-2);
+    color:var(--text-dim);
+    border:1px solid rgba(255,255,255,0.08);
+  }
+  .btn-danger{
+    background:rgba(230,69,90,0.12);
+    color:var(--danger);
+    border:1px solid rgba(230,69,90,0.35);
+  }
+
+  /* ===== Sections ===== */
+  section.panel{
+    margin:18px 14px 0;
+    background:var(--panel);
+    border-radius:18px;
+    padding:16px 14px 18px;
+    border:1px solid rgba(255,255,255,0.05);
+  }
+  .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .panel-head h2{
+    font-size:13px;
+    margin:0;
+    color:var(--text-dim);
+    font-weight:600;
+    letter-spacing:0.14em;
+  }
+  .count-pill{
+    font-family:'Inter',sans-serif;
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--text);
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.08);
+    padding:3px 10px;
+    border-radius:999px;
+  }
+  .empty-hint{
+    font-size:12.5px;
+    color:var(--text-dim2);
+    text-align:center;
+    padding:18px 8px;
+  }
+
+  /* ===== Bench grid ===== */
+  .bench-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(66px,1fr));
+    gap:10px 8px;
+  }
+  .slot{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .slot.bench-empty{
+    aspect-ratio:1/1.15;
+    border:1.5px dashed rgba(255,255,255,0.14);
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--text-dim2);
+    font-size:22px;
+    font-weight:300;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .slot.bench-empty:hover{ border-color:var(--gold); color:var(--gold); }
+  .slot.bench-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.06); }
+
+  /* ===== Card ===== */
+  .card{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    cursor:grab;
+    touch-action:none;
+    padding-top:10px;
+  }
+  .card:active{ cursor:grabbing; }
+  .ovr-badge{
+    position:absolute;
+    top:-4px;
+    background:#0d1512;
+    color:var(--gold);
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    padding:1px 7px;
+    border-radius:8px;
+    border:1px solid rgba(227,179,74,0.35);
+    z-index:2;
+  }
+  .avatar{
+    width:52px; height:52px;
+    border-radius:50%;
+    border:2.5px solid var(--ring, var(--c-def));
+    box-shadow:0 0 0 3px rgba(0,0,0,0.35), 0 4px 10px rgba(0,0,0,0.4);
+    overflow:hidden;
+    background:#20302a;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .avatar .init{
+    font-family:'Oswald',sans-serif;
+    font-size:16px;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .pos-badge{
+    margin-top:-9px;
+    font-family:'Oswald',sans-serif;
+    font-size:10px;
+    font-weight:700;
+    color:#0d1512;
+    padding:1px 7px;
+    border-radius:6px;
+    z-index:2;
+    letter-spacing:0.02em;
+  }
+  .name{
+    margin-top:5px;
+    font-size:10px;
+    font-weight:700;
+    color:var(--text);
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    text-align:center;
+    max-width:70px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .del-btn{
+    position:absolute;
+    top:-2px; right:2px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:rgba(20,20,20,0.75);
+    border:1px solid rgba(255,255,255,0.15);
+    color:#ff8b96;
+    font-size:9px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:3;
+    padding:0;
+  }
+  .flag-badge{
+    position:absolute;
+    top:-4px; right:-2px;
+    font-size:13px;
+    line-height:1;
+    z-index:2;
+    background:#0d1512;
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:50%;
+    width:18px; height:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .slot.selected .avatar{
+    box-shadow:0 0 0 3px rgba(227,179,74,0.9), 0 4px 12px rgba(227,179,74,0.4);
+  }
+  .slot.drop-target .avatar,
+  .slot.drop-target.bench-empty{
+    filter:brightness(1.2);
+  }
+  .slot.dragging{ opacity:0.35; }
+
+  /* ===== Formation button ===== */
+  .formation-btn{
+    display:flex; flex-direction:column; align-items:center; line-height:1.15;
+    padding:5px 12px; font-size:11px;
+  }
+  .formation-btn .f-label{ font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:0.04em; }
+  .formation-btn .f-sub{ font-size:8.5px; color:var(--text-dim2); letter-spacing:0.06em; text-transform:uppercase; }
+  .formation-list{ display:grid; gap:8px; }
+  .formation-opt{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-radius:10px; cursor:pointer;
+    background:var(--panel-2); border:1px solid rgba(255,255,255,0.08);
+    text-align:left; width:100%; color:var(--text); font-family:'Inter',sans-serif;
+  }
+  .formation-opt.active{ background:rgba(227,179,74,0.14); border-color:var(--gold); }
+  .formation-opt .fo-label{ font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:0.03em; }
+  .formation-opt .fo-desc{ font-size:9.5px; color:var(--text-dim2); margin-top:2px; }
+  .formation-opt .fo-tag{
+    font-size:9px; font-weight:700; color:var(--text-dim); background:var(--panel);
+    padding:2px 8px; border-radius:999px; letter-spacing:0.04em;
+  }
+
+  /* ===== Pitch ===== */
+  .pitch-wrap{
+    max-width:440px;
+    margin:0 auto;
+  }
+  .pitch{
+    position:relative;
+    width:100%;
+    aspect-ratio: 0.66;
+    border-radius:16px;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(0deg, var(--pitch-1) 0px, var(--pitch-1) 11%, var(--pitch-2) 11%, var(--pitch-2) 22%);
+    border:2px solid rgba(255,255,255,0.15);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.4);
+  }
+  .pitch::before{
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse 400px 220px at 50% 4%, rgba(255,255,255,0.10), transparent 65%);
+    pointer-events:none;
+  }
+  .pitch-lines{
+    position:absolute; inset:0;
+    pointer-events:none;
+  }
+  .pitch-lines .outer{ position:absolute; inset:5%; border:1.5px solid var(--line); }
+  .pitch-lines .mid{ position:absolute; left:5%; right:5%; top:50%; border-top:1.5px solid var(--line); }
+  .pitch-lines .circle{ position:absolute; left:50%; top:50%; width:26%; aspect-ratio:1; border:1.5px solid var(--line); border-radius:50%; transform:translate(-50%,-50%); }
+  .pitch-lines .box-top{ position:absolute; left:22%; right:22%; top:5%; height:15%; border:1.5px solid var(--line); border-top:none; }
+  .pitch-lines .box-bottom{ position:absolute; left:22%; right:22%; bottom:5%; height:15%; border:1.5px solid var(--line); border-bottom:none; }
+
+  .board-slot{
+    position:absolute;
+    transform:translate(-50%,-50%);
+  }
+  .board-slot .name{
+    color:#f4f7f5;
+    text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  }
+  .slot.board-empty{
+    width:52px; height:52px;
+    border-radius:50%;
+    border:2px dashed rgba(255,255,255,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    color:rgba(255,255,255,0.55);
+    background:rgba(0,0,0,0.15);
+  }
+  .slot.board-empty.drop-target{ border-color:var(--gold); color:var(--gold); background:rgba(227,179,74,0.1); }
+  .slot.board-empty.selected{ box-shadow:0 0 0 3px rgba(227,179,74,0.9); }
+
+  /* ===== Drag ghost ===== */
+  .drag-ghost{
+    position:fixed;
+    top:0; left:0;
+    pointer-events:none;
+    z-index:999;
+    opacity:0.92;
+    transform-origin:center;
+    filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+  }
+
+  /* ===== Modal ===== */
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(4,7,6,0.72);
+    backdrop-filter:blur(2px);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+  }
+  .modal-backdrop.hidden{ display:none; }
+  .modal{
+    background:var(--panel);
+    width:100%;
+    max-width:480px;
+    border-radius:20px 20px 0 0;
+    padding:18px 18px 26px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .modal-head h2{ font-size:16px; margin:0; color:var(--text); }
+  .modal-close{
+    background:none; border:none; color:var(--text-dim);
+    font-size:20px; cursor:pointer; line-height:1; padding:4px;
+  }
+
+  .photo-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:16px;
+  }
+  .photo-picker{
+    width:76px; height:76px;
+    border-radius:50%;
+    border:2px dashed rgba(255,255,255,0.25);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--text-dim2);
+    font-size:11px;
+    text-align:center;
+    cursor:pointer;
+    overflow:hidden;
+    flex-shrink:0;
+    position:relative;
+    background:var(--panel-2);
+  }
+  .photo-picker img{ width:100%; height:100%; object-fit:cover; }
+  .photo-picker input{ display:none; }
+  .photo-picker .hint{ padding:4px; }
+  .field-group{ flex:1; display:flex; flex-direction:column; gap:4px; }
+
+  label{
+    font-size:11px;
+    font-weight:600;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  input[type=text], input[type=number], select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+    margin-top:4px;
+  }
+  input:focus, select:focus{ outline:1.5px solid var(--gold); }
+  .form-row{ margin-bottom:14px; }
+  .form-grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .form-actions{
+    display:flex;
+    gap:10px;
+    margin-top:8px;
+  }
+  .form-actions .btn{ flex:1; justify-content:center; }
+  .err-msg{
+    color:var(--danger);
+    font-size:12px;
+    margin:-6px 0 12px;
+    display:none;
+  }
+
+  /* ===== Country picker ===== */
+  .country-picker-btn{
+    width:100%;
+    justify-content:space-between;
+    margin-top:4px;
+    font-weight:500;
+    color:var(--text);
+  }
+  .country-picker-arrow{ color:var(--text-dim2); font-size:16px; }
+  .modal.country-modal{
+    display:flex;
+    flex-direction:column;
+    max-height:78vh;
+    padding-bottom:10px;
+    overflow:hidden;
+  }
+  .country-search-row{
+    position:relative;
+    flex-shrink:0;
+    margin-bottom:8px;
+  }
+  .country-search-row input{ padding-right:36px; margin-top:0; }
+  .country-clear-btn{
+    position:absolute;
+    right:6px; top:50%;
+    transform:translateY(-50%);
+    background:none; border:none;
+    color:var(--text-dim2);
+    font-size:13px;
+    cursor:pointer;
+    padding:6px;
+    line-height:1;
+  }
+  .country-clear-btn:hover{ color:var(--text); }
+  .country-list{
+    overflow-y:auto;
+    flex:1;
+    margin:0 -18px;
+    padding:4px 10px 8px;
+  }
+  .country-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 8px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .country-item:active{ background:var(--panel-2); }
+  .country-item.active{ background:rgba(227,179,74,0.16); }
+  .country-item .flag{
+    font-size:21px;
+    line-height:1;
+    width:26px;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .country-item .cname{
+    font-size:13.5px;
+    color:var(--text);
+  }
+  .country-empty{
+    text-align:center;
+    color:var(--text-dim2);
+    font-size:12.5px;
+    padding:26px 0;
+  }
+
+  /* ===== Page system ===== */
+  .page.hidden{ display:none; }
+
+  /* ===== Squad page ===== */
+  .squad-header{
+    padding:18px 16px 16px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  .squad-header .eyebrow{
+    font-size:10.5px;
+    letter-spacing:0.22em;
+    color:var(--gold);
+    font-weight:600;
+    text-transform:uppercase;
+    display:block;
+    margin-bottom:8px;
+  }
+  .squad-id-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .squad-crest{
+    position:relative;
+    width:48px; height:48px;
+    border-radius:12px;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.1);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+    flex-shrink:0;
+    cursor:pointer;
+    overflow:hidden;
+  }
+  .squad-crest img{ width:100%; height:100%; object-fit:cover; }
+  .squad-crest input{ display:none; }
+  .squad-crest .crest-edit-badge{
+    position:absolute;
+    bottom:-2px; right:-2px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--gold);
+    color:#0d1512;
+    font-size:8px;
+    display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--bg);
+  }
+  .squad-id-text{ flex:1; min-width:0; }
+
+  .panel-crest{
+    width:22px; height:22px;
+    border-radius:7px;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.1);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px;
+    flex-shrink:0;
+    overflow:hidden;
+  }
+  .panel-crest img{ width:100%; height:100%; object-fit:cover; }
+  .editable-label{
+    cursor:pointer;
+    border-bottom:1px dashed rgba(255,255,255,0.25);
+    display:inline-block;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .editable-input{
+    background:var(--panel-2);
+    border:1px solid var(--gold);
+    border-radius:6px;
+    color:var(--text);
+    font-family:inherit;
+    padding:2px 6px;
+    width:100%;
+  }
+  .editable-input.hidden{ display:none; }
+  .squad-id-text .team-name .editable-label,
+  .squad-id-text .team-name .editable-input{
+    font-family:'Oswald',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .squad-id-text .stadium-name{
+    display:flex; align-items:center; gap:5px;
+    margin-top:2px;
+  }
+  .squad-id-text .stadium-name .editable-label,
+  .squad-id-text .stadium-name .editable-input{
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .squad-id-text .stadium-name svg{ flex-shrink:0; opacity:0.7; }
+
+  .squad-list{
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .squad-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.05);
+    border-radius:14px;
+    padding:9px 10px;
+  }
+  .squad-row .avatar{ width:44px; height:44px; flex-shrink:0; }
+  .squad-row .pos-badge{ margin-top:0; }
+  .squad-row-main{ flex:1; min-width:0; }
+  .squad-row-name{
+    font-family:'Oswald',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .squad-row-meta{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    color:var(--text-dim2);
+    margin-top:2px;
+  }
+  .squad-row-meta .flag{ font-size:13px; }
+  .squad-row-ovr{
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--gold);
+    background:var(--panel-2);
+    border-radius:10px;
+    padding:4px 10px;
+    flex-shrink:0;
+  }
+  .squad-row .del-btn{
+    position:static;
+    width:26px; height:26px;
+    font-size:11px;
+    flex-shrink:0;
+  }
+  .squad-empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--text-dim2);
+  }
+  .squad-empty .icon{ font-size:38px; margin-bottom:10px; opacity:0.5; }
+  .squad-empty p{ font-size:13px; margin:0; }
+
+  .create-player-card{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:16px;
+    border:1.5px dashed rgba(227,179,74,0.4);
+    border-radius:14px;
+    color:var(--gold);
+    font-family:'Oswald',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    background:rgba(227,179,74,0.05);
+    cursor:pointer;
+    margin:4px 14px 14px;
+  }
+  .create-player-card:active{ transform:scale(0.98); }
+
+  .squad-bottom-bar{
+    position:sticky;
+    bottom:0;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, transparent, var(--bg) 30%);
+  }
+  .squad-cta{
+    width:100%;
+    justify-content:center;
+    padding:14px;
+    font-size:14px;
+    border-radius:12px;
+  }
+  .squad-cta:disabled{
+    background:var(--panel-2);
+    color:var(--text-dim2);
+    cursor:not-allowed;
+  }
+  .squad-cta:disabled:active{ transform:none; }
+
+  /* ===== Page top bar (Create Player / Tactical Board) ===== */
+  .page-topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:16px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  .back-btn{
+    background:none; border:none;
+    color:var(--text);
+    font-size:20px;
+    cursor:pointer;
+    padding:4px 6px 4px 0;
+    line-height:1;
+  }
+  .page-topbar h2{ font-size:15px; margin:0; color:var(--text); }
+
+  /* ===== Sliders (Create Player) ===== */
+  .slider-row{ margin-bottom:16px; }
+  .slider-row-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .slider-row-head label{ margin:0; }
+  .slider-value{
+    font-family:'Oswald',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    color:var(--gold);
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--gold);
+    height:20px;
+    cursor:pointer;
+  }
+
+  /* ===== Player identity popup ===== */
+  .player-popup{
+    position:relative;
+    text-align:center;
+    padding:32px 22px 24px;
+  }
+  .player-popup-close{
+    position:absolute;
+    top:12px; right:12px;
+    font-size:20px;
+  }
+  .player-popup-photo{
+    width:96px; height:96px;
+    margin:0 auto 14px;
+    border-radius:50%;
+    overflow:hidden;
+    background:#20302a;
+    display:flex; align-items:center; justify-content:center;
+    border:3px solid var(--ring, var(--c-def));
+    box-shadow:0 0 0 4px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.45);
+  }
+  .player-popup-photo img{ width:100%; height:100%; object-fit:cover; }
+  .player-popup-photo .init{
+    font-family:'Oswald',sans-serif;
+    font-size:32px;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .player-popup-name{
+    font-family:'Oswald',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    color:var(--text);
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+  .player-popup-sub{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin-top:4px;
+  }
+  .player-popup-sub .flag{ font-size:15px; }
+  .player-popup-stats{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:8px;
+    margin-top:20px;
+  }
+  .player-popup-stat{
+    background:var(--panel-2);
+    border-radius:12px;
+    padding:10px 4px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+  }
+  .pp-label{
+    font-size:9px;
+    color:var(--text-dim2);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-weight:600;
+  }
+  .pp-value{
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .pp-value.gold{ color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- ===================================================================
+     PAGE 1 — SQUAD (roster before Tactical Board)
+==================================================================== -->
+<div class="page" id="pageSquad">
+  <div class="squad-header">
+    <span class="eyebrow">Squad Manager</span>
+    <div class="squad-id-row">
+      <label class="squad-crest" id="crestPicker">
+        <span id="crestEmoji">🛡️</span>
+        <span class="crest-edit-badge">✎</span>
+        <input type="file" accept="image/*" id="crestInput">
+      </label>
+      <div class="squad-id-text">
+        <div class="team-name">
+          <span class="editable-label" id="teamNameLabel">Team FC</span>
+          <input type="text" class="editable-input hidden" id="teamNameInput" maxlength="28">
+        </div>
+        <div class="stadium-name">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-6 7 6v11M9 21v-6h6v6"/></svg>
+          <span class="editable-label" id="stadiumNameLabel">Superkickoff Stadium</span>
+          <input type="text" class="editable-input hidden" id="stadiumNameInput" maxlength="32">
+        </div>
+      </div>
+      <span class="count-pill" id="squadCount">0/25</span>
+    </div>
+  </div>
+
+  <button class="create-player-card" id="openCreateBtn">✨ Buat Pemain</button>
+
+  <div class="squad-list" id="squadList"></div>
+
+  <div class="squad-bottom-bar">
+    <button class="btn btn-primary squad-cta" id="goToBoardBtn" disabled>Kurang Pemain (0/11)</button>
+  </div>
+</div>
+
+<!-- ===================================================================
+     PAGE 2 — CREATE PLAYER
+==================================================================== -->
+<div class="page hidden" id="pageCreate">
+  <div class="page-topbar">
+    <button class="back-btn" id="backFromCreateBtn">←</button>
+    <h2 id="createPageTitle">Buat Pemain</h2>
+  </div>
+
+  <div style="padding:16px;">
+    <div class="photo-row">
+      <label class="photo-picker" id="photoPicker">
+        <span class="hint" id="photoHint">Foto<br>1:1</span>
+        <input type="file" accept="image/*" id="photoInput">
+      </label>
+      <div class="field-group">
+        <label for="nameInput">Nama</label>
+        <input type="text" id="nameInput" placeholder="cth. Kylian Mbappe" maxlength="24">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label for="posInput">Posisi</label>
+      <select id="posInput">
+        <optgroup label="Kiper">
+          <option value="GK">GK</option>
+        </optgroup>
+        <optgroup label="Bertahan">
+          <option value="CB">CB</option>
+          <option value="LB">LB</option>
+          <option value="RB">RB</option>
+          <option value="LWB">LWB</option>
+          <option value="RWB">RWB</option>
+        </optgroup>
+        <optgroup label="Tengah">
+          <option value="CDM">CDM</option>
+          <option value="CM" selected>CM</option>
+          <option value="CAM">CAM</option>
+          <option value="LM">LM</option>
+          <option value="RM">RM</option>
+        </optgroup>
+        <optgroup label="Menyerang">
+          <option value="LW">LW</option>
+          <option value="RW">RW</option>
+          <option value="CF">CF</option>
+          <option value="ST">ST</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label for="natBtn">Kebangsaan</label>
+      <button type="button" class="btn btn-ghost country-picker-btn" id="natBtn">
+        <span id="natBtnLabel">Pilih negara</span>
+        <span class="country-picker-arrow">›</span>
+      </button>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-row-head">
+        <label>OVR</label>
+        <span class="slider-value" id="ovrValue">75</span>
+      </div>
+      <input type="range" id="ovrInput" min="40" max="99" value="75">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-row-head">
+        <label>Tinggi</label>
+        <span class="slider-value" id="heightValue">178 cm</span>
+      </div>
+      <input type="range" id="heightInput" min="140" max="220" value="178">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-row-head">
+        <label>Usia</label>
+        <span class="slider-value" id="ageValue">24 th</span>
+      </div>
+      <input type="range" id="ageInput" min="15" max="45" value="24">
+    </div>
+
+    <div class="err-msg" id="errMsg">Nama wajib diisi, dan Squad sudah penuh (25/25).</div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="saveBtn" style="width:100%;">Buat Pemain</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     PAGE 3 — TACTICAL BOARD
+==================================================================== -->
+<div class="page hidden" id="pageBoard">
+
+<div class="page-topbar">
+  <button class="back-btn" id="backFromBoardBtn">←</button>
+  <h2>Tactical Board</h2>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Bench</h2>
+    <span class="count-pill" id="benchCount">0/25</span>
+  </div>
+  <div id="benchGrid" class="bench-grid"></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 style="display:flex; align-items:center; gap:8px;">
+      Starting XI
+      <span class="panel-crest" id="panelCrest"><span id="panelCrestEmoji">🛡️</span></span>
+    </h2>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span class="count-pill" id="boardCount">0/11</span>
+      <button class="btn btn-ghost formation-btn" id="openFormationBtn">
+        <span class="f-label" id="formationLabel">4-3-3</span>
+        <span class="f-sub" id="formationSub">Balanced</span>
+      </button>
+      <button class="btn btn-ghost" id="resetBoardBtn" style="padding:6px 10px; font-size:11px;">↺ Reset</button>
+    </div>
+  </div>
+  <div class="pitch-wrap">
+    <div class="pitch" id="pitch">
+      <div class="pitch-lines">
+        <div class="outer"></div>
+        <div class="mid"></div>
+        <div class="circle"></div>
+        <div class="box-top"></div>
+        <div class="box-bottom"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- ===== Formation Modal ===== -->
+<div class="modal-backdrop hidden" id="formationBackdrop">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h2>Pilih Formasi</h2>
+      <button class="modal-close" id="closeFormationBtn">&times;</button>
+    </div>
+    <div class="formation-list" id="formationList"></div>
+  </div>
+</div>
+
+<!-- ===== Country Picker Modal ===== -->
+<div class="modal-backdrop hidden" id="countryBackdrop">
+  <div class="modal country-modal">
+    <div class="modal-head">
+      <h2>Pilih Negara</h2>
+      <button class="modal-close" id="closeCountryBtn">&times;</button>
+    </div>
+    <div class="country-search-row">
+      <input type="text" id="countrySearchInput" placeholder="Cari negara...">
+      <button class="country-clear-btn" id="clearCountrySearch" title="Bersihkan pencarian">✕</button>
+    </div>
+    <div class="country-list" id="countryList"></div>
+  </div>
+</div>
+
+<!-- ===== Player Identity Popup ===== -->
+<div class="modal-backdrop hidden" id="playerPopupBackdrop">
+  <div class="modal player-popup" style="max-width:380px;">
+    <button class="modal-close player-popup-close" id="closePlayerPopupBtn">&times;</button>
+    <div class="player-popup-photo" id="popupPhotoWrap"></div>
+    <div class="player-popup-name" id="popupName"></div>
+    <div class="player-popup-sub" id="popupSub"></div>
+    <div class="player-popup-stats">
+      <div class="player-popup-stat">
+        <span class="pp-label">OVR</span>
+        <span class="pp-value gold" id="popupOvr"></span>
+      </div>
+      <div class="player-popup-stat">
+        <span class="pp-label">Posisi</span>
+        <span class="pp-value" id="popupPos"></span>
+      </div>
+      <div class="player-popup-stat">
+        <span class="pp-label">Usia</span>
+        <span class="pp-value" id="popupAge"></span>
+      </div>
+      <div class="player-popup-stat">
+        <span class="pp-label">Tinggi</span>
+        <span class="pp-value" id="popupHeight"></span>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="popupEditBtn" style="width:100%; justify-content:center; margin-top:14px;">✎ Edit Pemain</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===================== CONFIG =====================
+  const BENCH_SIZE = 25;
+
+  // Each formation has exactly 11 slots, always in the same GK→DEF→MID→ATT
+  // index order. Switching formation keeps whoever is at index i in place —
+  // it just changes what that slot is called and where it sits on the pitch.
+  const FORMATIONS = [
+    {
+      id:"433", label:"4-3-3", sub:"Balanced", desc:"4 Bek, 3 Gelandang, 3 Depan",
+      slots:[
+        {label:'GK', x:50, y:91, group:'gk'},
+        {label:'LB', x:13, y:67, group:'def'},
+        {label:'CB', x:37, y:70, group:'def'},
+        {label:'CB', x:63, y:70, group:'def'},
+        {label:'RB', x:87, y:67, group:'def'},
+        {label:'LM', x:19, y:43, group:'mid'},
+        {label:'CM', x:50, y:46, group:'mid'},
+        {label:'RM', x:81, y:43, group:'mid'},
+        {label:'LW', x:17, y:15, group:'att'},
+        {label:'CF', x:50, y:11, group:'att'},
+        {label:'RW', x:83, y:15, group:'att'},
+      ]
+    },
+    {
+      id:"442", label:"4-4-2", sub:"Classic", desc:"4 Bek, 4 Gelandang, 2 Striker",
+      slots:[
+        {label:'GK', x:50, y:91, group:'gk'},
+        {label:'LB', x:13, y:67, group:'def'},
+        {label:'CB', x:37, y:70, group:'def'},
+        {label:'CB', x:63, y:70, group:'def'},
+        {label:'RB', x:87, y:67, group:'def'},
+        {label:'LM', x:12, y:45, group:'mid'},
+        {label:'CM', x:37, y:48, group:'mid'},
+        {label:'CM', x:63, y:48, group:'mid'},
+        {label:'RM', x:88, y:45, group:'mid'},
+        {label:'ST', x:35, y:15, group:'att'},
+        {label:'ST', x:65, y:15, group:'att'},
+      ]
+    },
+    {
+      id:"4231", label:"4-2-3-1", sub:"Modern", desc:"Double pivot + 3 AM",
+      slots:[
+        {label:'GK',  x:50, y:91, group:'gk'},
+        {label:'LB',  x:13, y:67, group:'def'},
+        {label:'CB',  x:37, y:70, group:'def'},
+        {label:'CB',  x:63, y:70, group:'def'},
+        {label:'RB',  x:87, y:67, group:'def'},
+        {label:'CDM', x:35, y:58, group:'mid'},
+        {label:'CDM', x:65, y:58, group:'mid'},
+        {label:'LM',  x:15, y:32, group:'mid'},
+        {label:'CAM', x:50, y:28, group:'mid'},
+        {label:'RM',  x:85, y:32, group:'mid'},
+        {label:'ST',  x:50, y:11, group:'att'},
+      ]
+    },
+    {
+      id:"352", label:"3-5-2", sub:"Wing-backs", desc:"3 Bek, 5 Gelandang, 2 Striker",
+      slots:[
+        {label:'GK',  x:50, y:91, group:'gk'},
+        {label:'CB',  x:30, y:72, group:'def'},
+        {label:'CB',  x:50, y:74, group:'def'},
+        {label:'CB',  x:70, y:72, group:'def'},
+        {label:'LWB', x:10, y:50, group:'def'},
+        {label:'CM',  x:33, y:50, group:'mid'},
+        {label:'CM',  x:50, y:48, group:'mid'},
+        {label:'CM',  x:67, y:50, group:'mid'},
+        {label:'RWB', x:90, y:50, group:'def'},
+        {label:'ST',  x:35, y:15, group:'att'},
+        {label:'ST',  x:65, y:15, group:'att'},
+      ]
+    },
+    {
+      id:"532", label:"5-3-2", sub:"Ultra Defensive", desc:"5 Bek, 3 Gelandang, 2 Striker",
+      slots:[
+        {label:'GK',  x:50, y:91, group:'gk'},
+        {label:'LWB', x:10, y:68, group:'def'},
+        {label:'CB',  x:30, y:72, group:'def'},
+        {label:'CB',  x:50, y:74, group:'def'},
+        {label:'CB',  x:70, y:72, group:'def'},
+        {label:'RWB', x:90, y:68, group:'def'},
+        {label:'CM',  x:25, y:48, group:'mid'},
+        {label:'CM',  x:50, y:50, group:'mid'},
+        {label:'CM',  x:75, y:48, group:'mid'},
+        {label:'ST',  x:35, y:15, group:'att'},
+        {label:'ST',  x:65, y:15, group:'att'},
+      ]
+    },
+    {
+      id:"451", label:"4-5-1", sub:"Defensive", desc:"Lebar di tengah, 1 Striker",
+      slots:[
+        {label:'GK', x:50, y:91, group:'gk'},
+        {label:'LB', x:13, y:67, group:'def'},
+        {label:'CB', x:37, y:70, group:'def'},
+        {label:'CB', x:63, y:70, group:'def'},
+        {label:'RB', x:87, y:67, group:'def'},
+        {label:'LM', x:10, y:48, group:'mid'},
+        {label:'CM', x:30, y:50, group:'mid'},
+        {label:'CM', x:50, y:52, group:'mid'},
+        {label:'CM', x:70, y:50, group:'mid'},
+        {label:'RM', x:90, y:48, group:'mid'},
+        {label:'ST', x:50, y:15, group:'att'},
+      ]
+    },
+  ];
+
+  function defaultBoard(){
+    return FORMATIONS[0].slots.map(s => ({ playerId:null, x:s.x, y:s.y }));
+  }
+
+  // ===================== STATE =====================
+  let players = {};              // id -> player object
+  let bench = new Array(BENCH_SIZE).fill(null); // playerId | null
+  let board = defaultBoard();    // array of 11 { playerId, x, y } — x/y are free (%), not locked to a formation
+  let formationIdx = 0;
+  let teamName = 'Team FC';
+  let stadiumName = 'Superkickoff Stadium';
+  let crestPhoto = null; // dataURL | null
+
+  // ===================== HELPERS =====================
+  function uid(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function groupOf(pos){
+    if(pos === 'GK') return 'gk';
+    if(['CB','LB','RB','LWB','RWB'].includes(pos)) return 'def';
+    if(['CDM','CM','CAM','LM','RM'].includes(pos)) return 'mid';
+    return 'att';
+  }
+
+  // ── Zone detection: figures out the position label for a free (x%,y%)
+  // spot on the pitch, live — this is what makes dragging feel real. ──
+  // y=0 → top (attack), y=100 → bottom (GK)
+  function getZonePosition(x, y){
+    if(y >= 82) return 'GK';
+    if(y >= 68){
+      if(x < 25) return 'LB';
+      if(x > 75) return 'RB';
+      return 'CB';
+    }
+    if(y >= 58){
+      if(x < 20) return 'LM';
+      if(x > 80) return 'RM';
+      return 'CDM';
+    }
+    if(y >= 45){
+      if(x < 20) return 'LM';
+      if(x > 80) return 'RM';
+      return 'CM';
+    }
+    if(y >= 30){
+      if(x < 22) return 'LM';
+      if(x > 78) return 'RM';
+      return 'CAM';
+    }
+    if(x < 28) return 'LW';
+    if(x > 72) return 'RW';
+    return y < 18 ? 'ST' : 'CF';
+  }
+
+  function initials(name){
+    return name.trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  async function saveState(){
+    try{
+      await window.storage.set('tactical-board-state', JSON.stringify({players, bench, board, formationIdx, teamName, stadiumName, crestPhoto}), false);
+    }catch(err){ /* storage unavailable — continue with in-memory state */ }
+  }
+
+  async function loadState(){
+    try{
+      const res = await window.storage.get('tactical-board-state', false);
+      if(res && res.value){
+        const data = JSON.parse(res.value);
+        players = data.players || {};
+        bench = data.bench && data.bench.length === BENCH_SIZE ? data.bench : new Array(BENCH_SIZE).fill(null);
+        formationIdx = Number.isInteger(data.formationIdx) && FORMATIONS[data.formationIdx] ? data.formationIdx : 0;
+        teamName = data.teamName || 'Team FC';
+        stadiumName = data.stadiumName || 'Superkickoff Stadium';
+        crestPhoto = data.crestPhoto || null;
+        // Migrate older board formats to the current { playerId, x, y }[] shape.
+        if(Array.isArray(data.board) && data.board.length === 11 && data.board[0] && typeof data.board[0] === 'object'){
+          board = data.board; // already free-form
+        } else if(Array.isArray(data.board) && data.board.length === 11){
+          // previous format: array of playerId|null tied to formation slot order
+          const f = FORMATIONS[formationIdx];
+          board = data.board.map((pid, i) => ({ playerId: pid, x: f.slots[i].x, y: f.slots[i].y }));
+        } else if(data.board && typeof data.board === 'object'){
+          // original legacy format: object keyed by slot id
+          const legacyOrder = ['gk','lb','cb1','cb2','rb','lm','cm','rm','lw','cf','rw'];
+          const f = FORMATIONS[0];
+          board = legacyOrder.map((k, i) => ({ playerId: data.board[k] || null, x: f.slots[i].x, y: f.slots[i].y }));
+        } else {
+          board = defaultBoard();
+        }
+      }
+    }catch(err){ /* no saved state yet */ }
+    teamNameLabel.textContent = teamName;
+    stadiumNameLabel.textContent = stadiumName;
+    renderCrest();
+    render();
+    renderSquadList();
+  }
+
+  // ===================== PAGE NAVIGATION =====================
+  const SQUAD_CAP = BENCH_SIZE; // roster cap matches bench capacity so everyone fits when heading to the board
+  const MIN_TO_PROCEED = 11;
+  const pages = { squad: document.getElementById('pageSquad'), create: document.getElementById('pageCreate'), board: document.getElementById('pageBoard') };
+  function showPage(name){
+    Object.entries(pages).forEach(([k, el]) => el.classList.toggle('hidden', k !== name));
+    window.scrollTo(0, 0);
+  }
+
+  // ===================== EDITABLE TEAM / STADIUM NAME =====================
+  const teamNameLabel = document.getElementById('teamNameLabel');
+  const teamNameInput = document.getElementById('teamNameInput');
+  const stadiumNameLabel = document.getElementById('stadiumNameLabel');
+  const stadiumNameInput = document.getElementById('stadiumNameInput');
+
+  function setupEditable(label, input, getVal, setVal){
+    label.addEventListener('click', () => {
+      input.value = getVal();
+      label.classList.add('hidden');
+      input.classList.remove('hidden');
+      input.focus();
+      input.select();
+    });
+    function commit(){
+      const v = input.value.trim();
+      if(v) setVal(v);
+      label.textContent = getVal();
+      input.classList.add('hidden');
+      label.classList.remove('hidden');
+      saveState();
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => { if(e.key === 'Enter') input.blur(); });
+  }
+  setupEditable(teamNameLabel, teamNameInput, () => teamName, (v) => { teamName = v; });
+  setupEditable(stadiumNameLabel, stadiumNameInput, () => stadiumName, (v) => { stadiumName = v; });
+
+  // ===================== CLUB CREST UPLOAD =====================
+  const crestEmojiEl = document.getElementById('crestEmoji');
+  const crestInput = document.getElementById('crestInput');
+  const crestPicker = document.getElementById('crestPicker');
+  const panelCrestEl = document.getElementById('panelCrest');
+  const panelCrestEmojiEl = document.getElementById('panelCrestEmoji');
+
+  function renderCrest(){
+    const oldImg = crestPicker.querySelector('img');
+    if(oldImg) oldImg.remove();
+    const oldPanelImg = panelCrestEl.querySelector('img');
+    if(oldPanelImg) oldPanelImg.remove();
+
+    if(crestPhoto){
+      crestEmojiEl.style.display = 'none';
+      const img = document.createElement('img');
+      img.src = crestPhoto;
+      crestPicker.insertBefore(img, crestInput);
+
+      panelCrestEmojiEl.style.display = 'none';
+      const panelImg = document.createElement('img');
+      panelImg.src = crestPhoto;
+      panelCrestEl.appendChild(panelImg);
+    } else {
+      crestEmojiEl.style.display = '';
+      panelCrestEmojiEl.style.display = '';
+    }
+  }
+
+  crestInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 160;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        crestPhoto = canvas.toDataURL('image/png', 0.9);
+        renderCrest();
+        saveState();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ===================== SQUAD LIST (PAGE 1) =====================
+  const squadListEl = document.getElementById('squadList');
+  const squadCountEl = document.getElementById('squadCount');
+  const goToBoardBtn = document.getElementById('goToBoardBtn');
+
+  function squadRowHTML(player){
+    const group = groupOf(player.position);
+    const photo = player.photo
+      ? `<img src="${player.photo}" alt="">`
+      : `<span class="init">${initials(player.name || '?')}</span>`;
+    const flag = player.nationalityCode ? `<span class="flag">${flagEmoji(player.nationalityCode)}</span>` : '';
+    return `
+      <div class="squad-row" data-pid="${player.id}" style="cursor:pointer;">
+        <div class="avatar" style="--ring:var(--c-${group})">${photo}</div>
+        <div class="squad-row-main">
+          <div class="squad-row-name">${escapeHtml(player.name || '')}</div>
+          <div class="squad-row-meta">
+            ${flag}
+            <span>${player.nationality || 'Tanpa negara'}</span>
+            <span>·</span>
+            <span>${player.age || '-'} th</span>
+          </div>
+        </div>
+        <div class="pos-badge" style="background:var(--c-${group}); margin-top:0;">${player.position}</div>
+        <div class="squad-row-ovr">${player.ovr}</div>
+        <button class="del-btn" data-del="${player.id}" title="Hapus pemain">✕</button>
+      </div>`;
+  }
+
+  function renderSquadList(){
+    const ids = Object.keys(players);
+    squadCountEl.textContent = `${ids.length}/${SQUAD_CAP}`;
+
+    if(ids.length === 0){
+      squadListEl.innerHTML = `
+        <div class="squad-empty">
+          <div class="icon">⚽</div>
+          <p>Belum ada pemain dibuat.</p>
+        </div>`;
+    } else {
+      squadListEl.innerHTML = ids.map(id => squadRowHTML(players[id])).join('');
+      squadListEl.querySelectorAll('.squad-row').forEach(row => {
+        row.addEventListener('click', () => {
+          openEditForm(row.dataset.pid);
+          showPage('create');
+        });
+      });
+      squadListEl.querySelectorAll('[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deletePlayer(btn.dataset.del);
+        });
+      });
+    }
+
+    if(ids.length >= MIN_TO_PROCEED){
+      goToBoardBtn.disabled = false;
+      goToBoardBtn.textContent = 'Lanjut ke Tactical Board →';
+    } else {
+      goToBoardBtn.disabled = true;
+      goToBoardBtn.textContent = `Kurang Pemain (${ids.length}/${MIN_TO_PROCEED})`;
+    }
+  }
+
+  document.getElementById('openCreateBtn').addEventListener('click', () => {
+    openCreateForm();
+    showPage('create');
+  });
+
+  goToBoardBtn.addEventListener('click', () => {
+    const ids = Object.keys(players);
+    if(ids.length < MIN_TO_PROCEED) return;
+    // Drop anyone not already placed (bench or board) into the next open
+    // bench slot — first trip fills the whole bench; later trips (after
+    // adding more players) just top it up without disturbing the board.
+    const placed = new Set([...bench.filter(Boolean), ...board.map(s => s.playerId).filter(Boolean)]);
+    let emptyIdx = bench.map((v, i) => v ? -1 : i).filter(i => i !== -1);
+    for(const id of ids){
+      if(placed.has(id)) continue;
+      if(emptyIdx.length === 0) break;
+      bench[emptyIdx.shift()] = id;
+    }
+    saveState();
+    render();
+    showPage('board');
+  });
+
+  document.getElementById('backFromBoardBtn').addEventListener('click', () => {
+    renderSquadList();
+    showPage('squad');
+  });
+
+  // ===================== RENDER =====================
+  const benchGridEl = document.getElementById('benchGrid');
+  const pitchEl = document.getElementById('pitch');
+  const benchCountEl = document.getElementById('benchCount');
+  const boardCountEl = document.getElementById('boardCount');
+
+  function cardHTML(player, labelOverride, groupOverride){
+    const group = groupOverride || groupOf(player.position);
+    const label = labelOverride || player.position;
+    const photo = player.photo
+      ? `<img src="${player.photo}" alt="">`
+      : `<span class="init">${initials(player.name || '?')}</span>`;
+    const flag = player.nationalityCode
+      ? `<div class="flag-badge">${flagEmoji(player.nationalityCode)}</div>`
+      : '';
+    return `
+      <div class="card" data-pid="${player.id}">
+        <div class="ovr-badge">${player.ovr}</div>
+        ${flag}
+        <div class="avatar" style="--ring:var(--c-${group})">${photo}</div>
+        <div class="pos-badge" style="background:var(--c-${group})">${label}</div>
+      </div>`;
+  }
+
+  function render(){
+    // ---- formation button label ----
+    const f = FORMATIONS[formationIdx];
+    document.getElementById('formationLabel').textContent = f.label;
+    document.getElementById('formationSub').textContent = f.sub;
+
+    // ---- bench ----
+    let benchFilled = 0;
+    benchGridEl.innerHTML = bench.map((pid, idx) => {
+      if(pid && players[pid]){
+        benchFilled++;
+        return `<div class="slot filled" data-type="bench" data-key="${idx}">${cardHTML(players[pid])}</div>`;
+      }
+      return `<div class="slot bench-empty" data-type="bench" data-key="${idx}"></div>`;
+    }).join('');
+    benchCountEl.textContent = `${benchFilled}/${BENCH_SIZE}`;
+
+    // ---- board ----
+    // Only render tokens for slots that actually have a player — an empty
+    // lineup shows a clean, blank pitch (no placeholder circles).
+    let boardFilled = 0;
+    const lines = pitchEl.querySelector('.pitch-lines').outerHTML;
+    pitchEl.innerHTML = lines + board.map((slot, idx) => {
+      const pid = slot.playerId;
+      if(!pid || !players[pid]) return '';
+      boardFilled++;
+      const zoneLabel = getZonePosition(slot.x, slot.y);
+      const inner = `<div class="slot filled" data-type="board" data-key="${idx}">${cardHTML(players[pid], zoneLabel, groupOf(zoneLabel))}</div>`;
+      return `<div class="board-slot" style="left:${slot.x}%; top:${slot.y}%;">${inner}</div>`;
+    }).join('');
+    boardCountEl.textContent = `${boardFilled}/${board.length}`;
+
+    attachSlotHandlers();
+  }
+
+  // ===================== SLOT DATA ACCESS =====================
+  function getPlayerIdAt(type, key){
+    return type === 'bench' ? bench[key] : board[key].playerId;
+  }
+  function setPlayerIdAt(type, key, val){
+    if(type === 'bench') bench[key] = val; else board[key].playerId = val;
+  }
+  function swapSlots(a, b){
+    if(a.type === b.type && a.key === b.key) return;
+    const pa = getPlayerIdAt(a.type, a.key);
+    const pb = getPlayerIdAt(b.type, b.key);
+    setPlayerIdAt(a.type, a.key, pb);
+    setPlayerIdAt(b.type, b.key, pa);
+    saveState();
+    render();
+  }
+
+  // ===================== DELETE PLAYER =====================
+  function deletePlayer(pid){
+    if(!confirm('Hapus pemain ini dari squad?')) return;
+    delete players[pid];
+    bench = bench.map(id => id === pid ? null : id);
+    board.forEach(slot => { if(slot.playerId === pid) slot.playerId = null; });
+    saveState();
+    render();
+    renderSquadList();
+  }
+
+  // ===================== PLAYER IDENTITY POPUP =====================
+  const playerPopupBackdrop = document.getElementById('playerPopupBackdrop');
+  const popupPhotoWrap = document.getElementById('popupPhotoWrap');
+  const popupNameEl = document.getElementById('popupName');
+  const popupSubEl = document.getElementById('popupSub');
+  const popupOvrEl = document.getElementById('popupOvr');
+  const popupPosEl = document.getElementById('popupPos');
+  const popupAgeEl = document.getElementById('popupAge');
+  const popupHeightEl = document.getElementById('popupHeight');
+  const popupEditBtn = document.getElementById('popupEditBtn');
+  let popupPlayerId = null;
+
+  function openPlayerPopup(type, key){
+    const pid = type === 'bench' ? bench[key] : board[key].playerId;
+    const player = pid && players[pid];
+    if(!player) return;
+    popupPlayerId = pid;
+
+    const group = type === 'board' ? groupOf(getZonePosition(board[key].x, board[key].y)) : groupOf(player.position);
+    popupPhotoWrap.style.setProperty('--ring', `var(--c-${group})`);
+    popupPhotoWrap.innerHTML = player.photo
+      ? `<img src="${player.photo}" alt="">`
+      : `<span class="init">${initials(player.name || '?')}</span>`;
+
+    popupNameEl.textContent = player.name || 'Tanpa Nama';
+    const flag = player.nationalityCode ? `<span class="flag">${flagEmoji(player.nationalityCode)}</span>` : '';
+    popupSubEl.innerHTML = `${flag}<span>${player.nationality || 'Tanpa negara'}</span>`;
+
+    popupOvrEl.textContent = player.ovr;
+    popupPosEl.textContent = type === 'board' ? getZonePosition(board[key].x, board[key].y) : player.position;
+    popupAgeEl.textContent = player.age ? `${player.age} th` : '-';
+    popupHeightEl.textContent = player.height ? `${player.height} cm` : '-';
+
+    playerPopupBackdrop.classList.remove('hidden');
+  }
+  function closePlayerPopup(){ playerPopupBackdrop.classList.add('hidden'); popupPlayerId = null; }
+
+  document.getElementById('closePlayerPopupBtn').addEventListener('click', closePlayerPopup);
+  playerPopupBackdrop.addEventListener('click', (e) => { if(e.target === playerPopupBackdrop) closePlayerPopup(); });
+  popupEditBtn.addEventListener('click', () => {
+    if(!popupPlayerId) return;
+    const pid = popupPlayerId;
+    closePlayerPopup();
+    openEditForm(pid);
+    showPage('create');
+  });
+
+  // ===================== RESET BOARD =====================
+  document.getElementById('resetBoardBtn').addEventListener('click', () => {
+    const occupied = board.filter(s => s.playerId);
+    if(occupied.length === 0) return;
+    let emptyBenchIdx = [];
+    bench.forEach((v, i) => { if(!v) emptyBenchIdx.push(i); });
+    if(emptyBenchIdx.length < occupied.length){
+      alert('Bench tidak cukup ruang kosong untuk menampung semua pemain dari lapangan.');
+      return;
+    }
+    const preset = FORMATIONS[formationIdx].slots;
+    board.forEach((slot, i) => {
+      if(slot.playerId){
+        const idx = emptyBenchIdx.shift();
+        bench[idx] = slot.playerId;
+        slot.playerId = null;
+      }
+      // snap shape back to the current formation preset too
+      slot.x = preset[i].x;
+      slot.y = preset[i].y;
+    });
+    saveState();
+    render();
+  });
+
+  // ===================== FORMATION SWITCHER =====================
+  const formationBackdrop = document.getElementById('formationBackdrop');
+  const formationListEl = document.getElementById('formationList');
+
+  function renderFormationList(){
+    formationListEl.innerHTML = FORMATIONS.map((f, idx) => `
+      <button class="formation-opt${idx === formationIdx ? ' active' : ''}" data-fidx="${idx}">
+        <span>
+          <div class="fo-label">${f.label}</div>
+          <div class="fo-desc">${f.desc}</div>
+        </span>
+        <span class="fo-tag">${f.sub}</span>
+      </button>
+    `).join('');
+    formationListEl.querySelectorAll('.formation-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        formationIdx = parseInt(btn.dataset.fidx, 10);
+        // Reshape: keep who's on each slot, just move the 11 slots to the
+        // new formation's preset spots. Players can still be dragged freely
+        // afterwards.
+        const preset = FORMATIONS[formationIdx].slots;
+        board.forEach((slot, i) => { slot.x = preset[i].x; slot.y = preset[i].y; });
+        saveState();
+        render();
+        closeFormationModal();
+      });
+    });
+  }
+
+  function openFormationModal(){
+    renderFormationList();
+    formationBackdrop.classList.remove('hidden');
+  }
+  function closeFormationModal(){ formationBackdrop.classList.add('hidden'); }
+
+  document.getElementById('openFormationBtn').addEventListener('click', openFormationModal);
+  document.getElementById('closeFormationBtn').addEventListener('click', closeFormationModal);
+  formationBackdrop.addEventListener('click', (e) => { if(e.target === formationBackdrop) closeFormationModal(); });
+
+  // ===================== TAP INTERACTION =====================
+  function clearDropTargets(){
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  }
+
+  function attachSlotHandlers(){
+    document.querySelectorAll('.slot').forEach(slotEl => {
+      const type = slotEl.dataset.type;
+      const key = parseInt(slotEl.dataset.key, 10);
+      const filled = slotEl.classList.contains('filled');
+
+      if(filled){
+        const cardEl = slotEl.querySelector('.card');
+        cardEl.addEventListener('pointerdown', (e) => onCardPointerDown(e, slotEl, type, key));
+      }
+      // Empty slots are just inert drop targets now — nothing happens on tap.
+    });
+  }
+
+  // Converts a pointer position into clamped pitch percentages (4-96).
+  function pitchPercentFromPoint(clientX, clientY){
+    const rect = pitchEl.getBoundingClientRect();
+    const x = Math.min(96, Math.max(4, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(96, Math.max(4, ((clientY - rect.top) / rect.height) * 100));
+    return { x, y };
+  }
+
+  function onCardPointerDown(e, slotEl, type, key){
+    e.preventDefault();
+    const cardEl = e.currentTarget;
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    let ghost = null;
+
+    // Board cards are dragged "live" — the real token follows the pointer
+    // around the pitch and its position label updates in real time based
+    // on where it currently sits. Bench cards use a ghost clone since they
+    // don't live on the pitch until dropped there.
+    const wrapperEl = type === 'board' ? slotEl.closest('.board-slot') : null;
+    const posBadgeEl = type === 'board' ? cardEl.querySelector('.pos-badge') : null;
+    const avatarEl = type === 'board' ? cardEl.querySelector('.avatar') : null;
+    let live = null; // last live {x,y} while dragging a board card
+
+    function updateLiveLabel(x, y){
+      const zone = getZonePosition(x, y);
+      const group = groupOf(zone);
+      posBadgeEl.textContent = zone;
+      posBadgeEl.style.background = `var(--c-${group})`;
+      avatarEl.style.setProperty('--ring', `var(--c-${group})`);
+    }
+
+    function onMove(ev){
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!dragging && Math.hypot(dx, dy) > 8){
+        dragging = true;
+        if(type === 'board'){
+          wrapperEl.style.zIndex = '50'; // float above other tokens while moving, stays fully visible (no ghost needed)
+        } else {
+          slotEl.classList.add('dragging');
+          const rect = cardEl.getBoundingClientRect();
+          ghost = cardEl.cloneNode(true);
+          ghost.classList.add('drag-ghost');
+          ghost.style.width = rect.width + 'px';
+          ghost.querySelectorAll('.del-btn').forEach(b => b.remove());
+          document.body.appendChild(ghost);
+        }
+      }
+      if(!dragging) return;
+
+      if(type === 'board'){
+        const { x, y } = pitchPercentFromPoint(ev.clientX, ev.clientY);
+        live = { x, y };
+        wrapperEl.style.left = x + '%';
+        wrapperEl.style.top  = y + '%';
+        updateLiveLabel(x, y);
+        // still detect hover-over-another-card for the swap option
+        clearDropTargets();
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const targetSlot = under ? under.closest('.slot') : null;
+        if(targetSlot && targetSlot !== slotEl) targetSlot.classList.add('drop-target');
+      } else if(ghost){
+        ghost.style.transform = `translate(${ev.clientX - 26}px, ${ev.clientY - 26}px)`;
+        clearDropTargets();
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const targetSlot = under ? under.closest('.slot') : null;
+        if(targetSlot && targetSlot !== slotEl) targetSlot.classList.add('drop-target');
+      }
+    }
+
+    function onUp(ev){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+
+      if(dragging){
+        slotEl.classList.remove('dragging');
+        if(ghost) ghost.remove();
+        clearDropTargets();
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const targetSlot = under ? under.closest('.slot') : null;
+
+        if(targetSlot && targetSlot !== slotEl){
+          // Dropped on another card/slot -> swap occupants (positions stay put)
+          const tType = targetSlot.dataset.type;
+          const tKey = parseInt(targetSlot.dataset.key, 10);
+          swapSlots({type, key}, {type: tType, key: tKey});
+        } else if(type === 'board'){
+          // Dropped on open grass -> place freely at that exact spot
+          if(wrapperEl) wrapperEl.style.zIndex = '';
+          const pt = live || pitchPercentFromPoint(ev.clientX, ev.clientY);
+          board[key].x = pt.x;
+          board[key].y = pt.y;
+          saveState();
+          render();
+        } else if(type === 'bench'){
+          // Dropped a bench character onto open grass -> add to lineup there
+          const pitchRect = pitchEl.getBoundingClientRect();
+          const overPitch = ev.clientX >= pitchRect.left && ev.clientX <= pitchRect.right &&
+                             ev.clientY >= pitchRect.top  && ev.clientY <= pitchRect.bottom;
+          if(overPitch){
+            const emptyIdx = board.findIndex(s => !s.playerId);
+            if(emptyIdx === -1){
+              alert('Starting XI sudah penuh (11/11). Keluarkan satu pemain dulu.');
+            } else {
+              const pt = pitchPercentFromPoint(ev.clientX, ev.clientY);
+              board[emptyIdx].playerId = bench[key];
+              board[emptyIdx].x = pt.x;
+              board[emptyIdx].y = pt.y;
+              bench[key] = null;
+              saveState();
+              render();
+            }
+          }
+        }
+      } else {
+        // plain tap (no drag) -> show the player's identity card
+        openPlayerPopup(type, key);
+      }
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  // ===================== COUNTRY DATA =====================
+  const COUNTRIES = [
+    ['AF','Afghanistan'],['AL','Albania'],['DZ','Aljazair'],['AD','Andorra'],['AO','Angola'],
+    ['AG','Antigua dan Barbuda'],['AR','Argentina'],['AM','Armenia'],['AU','Australia'],['AT','Austria'],
+    ['AZ','Azerbaijan'],['BS','Bahama'],['BH','Bahrain'],['BD','Bangladesh'],['BB','Barbados'],
+    ['BY','Belarus'],['BE','Belgia'],['BZ','Belize'],['BJ','Benin'],['BT','Bhutan'],
+    ['BO','Bolivia'],['BA','Bosnia dan Herzegovina'],['BW','Botswana'],['BR','Brasil'],['BN','Brunei Darussalam'],
+    ['BG','Bulgaria'],['BF','Burkina Faso'],['BI','Burundi'],['KH','Kamboja'],['CM','Kamerun'],
+    ['CA','Kanada'],['CV','Tanjung Verde'],['CF','Republik Afrika Tengah'],['TD','Chad'],['CL','Chili'],
+    ['CN','Tiongkok'],['CO','Kolombia'],['KM','Komoro'],['CG','Kongo'],['CD','Kongo (RDK)'],
+    ['CR','Kosta Rika'],['CI','Pantai Gading'],['HR','Kroasia'],['CU','Kuba'],['CY','Siprus'],
+    ['CZ','Ceko'],['DK','Denmark'],['DJ','Djibouti'],['DM','Dominika'],['DO','Republik Dominika'],
+    ['EC','Ekuador'],['EG','Mesir'],['SV','El Salvador'],['GQ','Guinea Khatulistiwa'],['ER','Eritrea'],
+    ['EE','Estonia'],['SZ','Eswatini'],['ET','Etiopia'],['FJ','Fiji'],['FI','Finlandia'],
+    ['FR','Prancis'],['GA','Gabon'],['GM','Gambia'],['GE','Georgia'],['DE','Jerman'],
+    ['GH','Ghana'],['GR','Yunani'],['GD','Grenada'],['GT','Guatemala'],['GN','Guinea'],
+    ['GW','Guinea-Bissau'],['GY','Guyana'],['HT','Haiti'],['HN','Honduras'],['HU','Hungaria'],
+    ['IS','Islandia'],['IN','India'],['ID','Indonesia'],['IR','Iran'],['IQ','Irak'],
+    ['IE','Irlandia'],['IL','Israel'],['IT','Italia'],['JM','Jamaika'],['JP','Jepang'],
+    ['JO','Yordania'],['KZ','Kazakhstan'],['KE','Kenya'],['KI','Kiribati'],['KP','Korea Utara'],
+    ['KR','Korea Selatan'],['XK','Kosovo'],['KW','Kuwait'],['KG','Kirgistan'],['LA','Laos'],
+    ['LV','Latvia'],['LB','Lebanon'],['LS','Lesotho'],['LR','Liberia'],['LY','Libya'],
+    ['LI','Liechtenstein'],['LT','Lituania'],['LU','Luksemburg'],['MG','Madagaskar'],['MW','Malawi'],
+    ['MY','Malaysia'],['MV','Maladewa'],['ML','Mali'],['MT','Malta'],['MH','Kepulauan Marshall'],
+    ['MR','Mauritania'],['MU','Mauritius'],['MX','Meksiko'],['FM','Mikronesia'],['MD','Moldova'],
+    ['MC','Monako'],['MN','Mongolia'],['ME','Montenegro'],['MA','Maroko'],['MZ','Mozambik'],
+    ['MM','Myanmar'],['NA','Namibia'],['NR','Nauru'],['NP','Nepal'],['NL','Belanda'],
+    ['NZ','Selandia Baru'],['NI','Nikaragua'],['NE','Niger'],['NG','Nigeria'],['MK','Makedonia Utara'],
+    ['NO','Norwegia'],['OM','Oman'],['PK','Pakistan'],['PW','Palau'],['PS','Palestina'],
+    ['PA','Panama'],['PG','Papua Nugini'],['PY','Paraguay'],['PE','Peru'],['PH','Filipina'],
+    ['PL','Polandia'],['PT','Portugal'],['QA','Qatar'],['RO','Rumania'],['RU','Rusia'],
+    ['RW','Rwanda'],['KN','Saint Kitts dan Nevis'],['LC','Saint Lucia'],['VC','Saint Vincent dan Grenadines'],['WS','Samoa'],
+    ['SM','San Marino'],['ST','Sao Tome dan Principe'],['SA','Arab Saudi'],['SN','Senegal'],['RS','Serbia'],
+    ['SC','Seychelles'],['SL','Sierra Leone'],['SG','Singapura'],['SK','Slowakia'],['SI','Slovenia'],
+    ['SB','Kepulauan Solomon'],['SO','Somalia'],['ZA','Afrika Selatan'],['SS','Sudan Selatan'],['ES','Spanyol'],
+    ['LK','Sri Lanka'],['SD','Sudan'],['SR','Suriname'],['SE','Swedia'],['CH','Swiss'],
+    ['SY','Suriah'],['TW','Taiwan'],['TJ','Tajikistan'],['TZ','Tanzania'],['TH','Thailand'],
+    ['TL','Timor Leste'],['TG','Togo'],['TO','Tonga'],['TT','Trinidad dan Tobago'],['TN','Tunisia'],
+    ['TR','Turki'],['TM','Turkmenistan'],['TV','Tuvalu'],['UG','Uganda'],['UA','Ukraina'],
+    ['AE','Uni Emirat Arab'],['GB','Inggris'],['US','Amerika Serikat'],['UY','Uruguay'],['UZ','Uzbekistan'],
+    ['VU','Vanuatu'],['VA','Vatikan'],['VE','Venezuela'],['VN','Vietnam'],['YE','Yaman'],
+    ['ZM','Zambia'],['ZW','Zimbabwe'],
+  ].sort((a,b) => a[1].localeCompare(b[1]));
+
+  function flagEmoji(code){
+    return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+  }
+
+  // ===================== CREATE PLAYER PAGE =====================
+  const photoPicker = document.getElementById('photoPicker');
+  const photoInput = document.getElementById('photoInput');
+  const photoHint = document.getElementById('photoHint');
+  const nameInput = document.getElementById('nameInput');
+  const ovrInput = document.getElementById('ovrInput');
+  const ovrValueEl = document.getElementById('ovrValue');
+  const posInput = document.getElementById('posInput');
+  const natBtn = document.getElementById('natBtn');
+  const natBtnLabel = document.getElementById('natBtnLabel');
+  const heightInput = document.getElementById('heightInput');
+  const heightValueEl = document.getElementById('heightValue');
+  const ageInput = document.getElementById('ageInput');
+  const ageValueEl = document.getElementById('ageValue');
+  const errMsg = document.getElementById('errMsg');
+  const createPageTitleEl = document.getElementById('createPageTitle');
+  const saveBtnEl = document.getElementById('saveBtn');
+  let pendingPhoto = null;
+  let pendingCountry = null; // [code, name] | null
+
+  function setCountryLabel(){
+    natBtnLabel.textContent = pendingCountry ? `${flagEmoji(pendingCountry[0])}  ${pendingCountry[1]}` : 'Pilih negara';
+  }
+
+  ovrInput.addEventListener('input', () => { ovrValueEl.textContent = ovrInput.value; });
+  heightInput.addEventListener('input', () => { heightValueEl.textContent = heightInput.value + ' cm'; });
+  ageInput.addEventListener('input', () => { ageValueEl.textContent = ageInput.value + ' th'; });
+
+  let editingPlayerId = null; // null = creating new, else id of player being edited
+
+  function openCreateForm(){
+    editingPlayerId = null;
+    createPageTitleEl.textContent = 'Buat Pemain';
+    saveBtnEl.textContent = 'Buat Pemain';
+    nameInput.value = '';
+    ovrInput.value = 75; ovrValueEl.textContent = '75';
+    posInput.value = 'CM';
+    pendingCountry = null;
+    setCountryLabel();
+    heightInput.value = 178; heightValueEl.textContent = '178 cm';
+    ageInput.value = 24; ageValueEl.textContent = '24 th';
+    pendingPhoto = null;
+    photoHint.style.display = '';
+    const existingImg = photoPicker.querySelector('img');
+    if(existingImg) existingImg.remove();
+    errMsg.style.display = 'none';
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function openEditForm(pid){
+    const player = players[pid];
+    if(!player) return;
+    editingPlayerId = pid;
+    createPageTitleEl.textContent = 'Edit Pemain';
+    saveBtnEl.textContent = 'Simpan Perubahan';
+    nameInput.value = player.name || '';
+    ovrInput.value = player.ovr || 75; ovrValueEl.textContent = String(ovrInput.value);
+    posInput.value = player.position || 'CM';
+    pendingCountry = player.nationalityCode ? [player.nationalityCode, player.nationality] : null;
+    setCountryLabel();
+    heightInput.value = player.height || 178; heightValueEl.textContent = heightInput.value + ' cm';
+    ageInput.value = player.age || 24; ageValueEl.textContent = ageInput.value + ' th';
+    pendingPhoto = player.photo || null;
+    const existingImg = photoPicker.querySelector('img');
+    if(existingImg) existingImg.remove();
+    if(pendingPhoto){
+      photoHint.style.display = 'none';
+      const imgEl = document.createElement('img');
+      imgEl.src = pendingPhoto;
+      photoPicker.insertBefore(imgEl, photoInput);
+    } else {
+      photoHint.style.display = '';
+    }
+    errMsg.style.display = 'none';
+  }
+
+  document.getElementById('backFromCreateBtn').addEventListener('click', () => showPage('squad'));
+
+  photoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 220;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        pendingPhoto = canvas.toDataURL('image/jpeg', 0.85);
+        photoHint.style.display = 'none';
+        const old = photoPicker.querySelector('img');
+        if(old) old.remove();
+        const imgEl = document.createElement('img');
+        imgEl.src = pendingPhoto;
+        photoPicker.insertBefore(imgEl, photoInput);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    const isNew = !editingPlayerId;
+    const roomLeft = !isNew || Object.keys(players).length < SQUAD_CAP;
+
+    if(!name || !roomLeft){
+      errMsg.textContent = !name
+        ? 'Nama pemain wajib diisi.'
+        : `Squad sudah penuh (${SQUAD_CAP}/${SQUAD_CAP}). Hapus pemain lain dulu.`;
+      errMsg.style.display = 'block';
+      return;
+    }
+
+    const player = {
+      id: isNew ? uid() : editingPlayerId,
+      name,
+      ovr: Math.max(40, Math.min(99, parseInt(ovrInput.value, 10) || 75)),
+      position: posInput.value,
+      nationality: pendingCountry ? pendingCountry[1] : '',
+      nationalityCode: pendingCountry ? pendingCountry[0] : null,
+      height: parseInt(heightInput.value, 10) || null,
+      age: parseInt(ageInput.value, 10) || null,
+      photo: pendingPhoto,
+    };
+
+    players[player.id] = player;
+    editingPlayerId = null;
+    saveState();
+    render(); // in case this player is already placed on the bench/board (name/photo/etc shown there too)
+    renderSquadList();
+    showPage('squad');
+  });
+
+  // ===================== COUNTRY PICKER MODAL =====================
+  const countryBackdrop = document.getElementById('countryBackdrop');
+  const countryListEl = document.getElementById('countryList');
+  const countrySearchInput = document.getElementById('countrySearchInput');
+  const clearCountrySearch = document.getElementById('clearCountrySearch');
+
+  function renderCountryList(){
+    const q = countrySearchInput.value.trim().toLowerCase();
+    const filtered = q ? COUNTRIES.filter(([, name]) => name.toLowerCase().includes(q)) : COUNTRIES;
+    if(filtered.length === 0){
+      countryListEl.innerHTML = `<div class="country-empty">Negara tidak ditemukan.</div>`;
+      return;
+    }
+    countryListEl.innerHTML = filtered.map(([code, name]) => `
+      <div class="country-item${pendingCountry && pendingCountry[0] === code ? ' active' : ''}" data-code="${code}" data-name="${escapeHtml(name)}">
+        <span class="flag">${flagEmoji(code)}</span>
+        <span class="cname">${escapeHtml(name)}</span>
+      </div>
+    `).join('');
+    countryListEl.querySelectorAll('.country-item').forEach(item => {
+      item.addEventListener('click', () => {
+        pendingCountry = [item.dataset.code, item.dataset.name];
+        setCountryLabel();
+        closeCountryModal();
+      });
+    });
+  }
+
+  function openCountryModal(){
+    countrySearchInput.value = '';
+    renderCountryList();
+    countryBackdrop.classList.remove('hidden');
+    setTimeout(() => countrySearchInput.focus(), 50);
+  }
+  function closeCountryModal(){ countryBackdrop.classList.add('hidden'); }
+
+  natBtn.addEventListener('click', openCountryModal);
+  document.getElementById('closeCountryBtn').addEventListener('click', closeCountryModal);
+  countryBackdrop.addEventListener('click', (e) => { if(e.target === countryBackdrop) closeCountryModal(); });
+  countrySearchInput.addEventListener('input', renderCountryList);
+  clearCountrySearch.addEventListener('click', () => {
+    countrySearchInput.value = '';
+    countrySearchInput.focus();
+    renderCountryList();
+  });
+
+
+  // ===================== INIT =====================
+  loadState();
+})();
+</script>
+</body>
+</html>
